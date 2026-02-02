@@ -1,0 +1,8 @@
+{
+  "name": "Zynergy AI Interview System",
+  "description": "A real-time explainable multimodal confidence estimation system for AI-powered interviews, featuring facial, vocal, and semantic analysis.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

@@ -11,3 +11,4 @@ echo Both services are starting...
 echo Backend: http://localhost:5000
 echo Frontend: http://localhost:3000
 pause
+

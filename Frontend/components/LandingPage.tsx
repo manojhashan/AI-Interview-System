@@ -60,7 +60,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ isLoggedIn, onGetStarted, onG
       <section className="pt-40 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
-            <Zap size={14} /> POWERED BY GEMINI 2.5
+            <Zap size={14} /> POWERED BY ZYNERGY
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold mb-8 tracking-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent leading-tight">
             Master Your Next <br /> <span className="text-blue-500">Interview with AI</span>

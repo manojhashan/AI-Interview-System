@@ -3,29 +3,34 @@ import React, { useState, useEffect } from 'react';
 import { InterviewResult } from '../types';
 import { Calendar, Briefcase, ChevronRight, Award, Trash2, Search } from 'lucide-react';
 
+import { geminiService } from '../geminiService';
+
 interface HistoryViewProps {
+  userId: string;
   onViewResult: (id: string) => void;
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ onViewResult }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ userId, onViewResult }) => {
   const [history, setHistory] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('zynergy_results');
-    if (saved) {
-      // Sorting by date descending (newest first)
-      const parsed = JSON.parse(saved);
-      setHistory(parsed.reverse());
-    }
-  }, []);
+    const loadHistory = async () => {
+        const results = await geminiService.getUserResults(userId);
+        // Backend might not sort, so reverse here if we want newest first if backend sends oldest first
+        // Assuming backend sends simpler list or we sort:
+        setHistory(results.reverse());
+    };
+    loadHistory();
+  }, [userId]);
 
-  const deleteRecord = (e: React.MouseEvent, id: string) => {
+  const deleteRecord = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (window.confirm('Delete this interview record permanently?')) {
-      const updated = history.filter(item => item.id !== id);
-      setHistory(updated);
-      localStorage.setItem('zynergy_results', JSON.stringify(updated.reverse()));
+      // Currently no API for delete result, assuming frontend only hiding or todo
+      // We didn't add DELETE /api/results/{id} yet.
+      // For now, just alert or skip until implemented.
+      alert("Delete not supported on backend yet.");
     }
   };
 

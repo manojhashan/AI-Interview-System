@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { ArrowLeft, CheckCircle2, Info, MessageSquare, Award, Star, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Info, MessageSquare, Award, Star, User, Loader2 } from 'lucide-react';
 import { InterviewResult } from '../types';
+import { geminiService } from '../geminiService';
 
 interface ResultViewProps {
   resultId: string | null;
@@ -9,8 +10,27 @@ interface ResultViewProps {
 }
 
 const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
-  const results: InterviewResult[] = JSON.parse(localStorage.getItem('zynergy_results') || '[]');
-  const result = results.find(r => r.id === resultId) || results[results.length - 1];
+  const [result, setResult] = React.useState<InterviewResult | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchResult = async () => {
+        if (!resultId) {
+            setLoading(false);
+            return;
+        }
+        const data = await geminiService.getInterviewResult(resultId);
+        setResult(data);
+        setLoading(false);
+    };
+    fetchResult();
+  }, [resultId]);
+
+  if (loading) return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="animate-spin text-blue-500" size={48} />
+      </div>
+  );
 
   if (!result) return <div className="text-center py-20 text-white">Result data could not be retrieved.</div>;
 

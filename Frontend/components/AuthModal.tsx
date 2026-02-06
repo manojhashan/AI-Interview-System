@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, ArrowRight, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, ArrowRight, ArrowLeft, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../types';
+import { geminiService } from '../geminiService';
 
 interface AuthModalProps {
   initialMode: 'login' | 'signup';
   onClose: () => void;
-  onSuccess: (role: UserRole, email: string, name: string) => void;
+  onSuccess: (role: UserRole, email: string, name: string, userId: string) => void;
 }
 
 type AuthView = 'login' | 'signup' | 'forgot-password' | 'otp-verify' | 'reset-password';
@@ -16,39 +17,124 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [otp, setOtp] = useState(['', '', '', '']);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
 
-    // Determine role based on email suffix
-    const role = email.toLowerCase().endsWith('@admin.com') ? UserRole.ADMIN : UserRole.CANDIDATE;
-    const nameToUse = fullName || (role === UserRole.ADMIN ? 'System Admin' : 'Candidate User');
+    try {
+      let role: UserRole | undefined;
+      let nameToUse: string | undefined;
+      let userId: string | undefined;
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      onSuccess(role, email, nameToUse);
-    }, 1500);
+      if (view === 'login') {
+        const result = await geminiService.login(email, password);
+        if (!result.success) {
+            setErrorMsg(result.error || "Login failed");
+            setLoading(false);
+            return;
+        }
+        role = result.data.role;
+        nameToUse = result.data.username;
+        userId = result.data.user_id;
+      
+      } else if (view === 'signup') {
+        if (password !== confirmPassword) {
+            setErrorMsg("Passwords do not match");
+            setLoading(false);
+            return;
+        }
+        const names = fullName.split(' ');
+        const firstName = names[0];
+        const lastName = names.slice(1).join(' ') || 'User';
+
+        const result = await geminiService.signup(email, password, firstName, lastName);
+        if (!result.success) {
+            setErrorMsg(result.error || "Signup failed");
+            setLoading(false);
+            return;
+        }
+        role = result.data.role || UserRole.CANDIDATE;
+        nameToUse = result.data.username || fullName;
+        userId = result.data.user_id;
+      } else {
+        // Other views handled elsewhere
+        return;
+      }
+
+      if (role && nameToUse && userId) {
+         onSuccess(role, email, nameToUse, userId);
+      } else {
+         setErrorMsg("Authentication successful but user data missing.");
+      }
+
+    } catch (err) {
+        setErrorMsg("An unexpected error occurred.");
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setView('otp-verify');
-    }, 1200);
+    setErrorMsg(null);
+    const result = await geminiService.forgotPassword(email);
+    setLoading(false);
+    
+    if (result.success) {
+        setView('otp-verify');
+    } else {
+        setErrorMsg(result.error || "Failed to send code");
+    }
   };
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setErrorMsg(null);
+    const otpString = otp.join('');
+    
+    const result = await geminiService.verifyOtp(email, otpString);
+    setLoading(false);
+    
+    if (result.success) {
+        setView('reset-password');
+    } else {
+        setErrorMsg(result.error || "Invalid code");
+    }
+  };
+  
+  const handleResetPassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setErrorMsg(null);
+      
+      if (password !== confirmPassword) {
+          setErrorMsg("Passwords do not match");
+          setLoading(false);
+          return;
+      }
+      
+      const otpString = otp.join('');
+      const result = await geminiService.resetPassword(email, otpString, password);
       setLoading(false);
-      setView('reset-password');
-    }, 1000);
+      
+      if (result.success) {
+          setView('login');
+          // Maybe show success message?
+          alert("Password reset successfully! Please login with new password.");
+      } else {
+          setErrorMsg(result.error || "Reset failed");
+      }
   };
 
   return (
@@ -82,7 +168,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
           <form onSubmit={
             view === 'login' || view === 'signup' ? handleSubmit : 
             view === 'forgot-password' ? handleForgotPassword :
-            view === 'otp-verify' ? handleOtpVerify : handleSubmit
+            view === 'otp-verify' ? handleOtpVerify : handleResetPassword
           } className="space-y-5">
             
             {(view === 'signup') && (
@@ -102,6 +188,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               </div>
             )}
 
+            {errorMsg && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl text-sm text-center">
+                    {errorMsg}
+                </div>
+            )}
+
             {(view === 'login' || view === 'signup' || view === 'forgot-password') && (
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
@@ -117,7 +209,47 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                  <input required type="password" minLength={8} className="w-full bg-slate-950 border border-white/5 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500/50 transition-all text-sm" placeholder="••••••••" />
+                  <input 
+                    required 
+                    type={showPassword ? "text" : "password"} 
+                    minLength={8} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-white/5 rounded-xl py-3.5 pl-12 pr-12 outline-none focus:border-blue-500/50 transition-all text-sm" 
+                    placeholder="••••••••" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+             {(view === 'signup' || view === 'reset-password') && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Confirm Password</label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                  <input 
+                    required 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    minLength={8} 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-white/5 rounded-xl py-3.5 pl-12 pr-12 outline-none focus:border-blue-500/50 transition-all text-sm" 
+                    placeholder="••••••••" 
+                  />
+                   <button 
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
             )}

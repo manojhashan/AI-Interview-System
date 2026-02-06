@@ -4,3 +4,8 @@ pydantic
 python-dotenv
 google-generativeai
 python-multipart
+psycopg2-binary
+sqlalchemy
+passlib
+bcrypt==3.2.0
+python-jose[cryptography]

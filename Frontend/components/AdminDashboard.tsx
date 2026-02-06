@@ -1,133 +1,125 @@
-
 import React, { useState, useEffect } from 'react';
-import { Users, FileText, Activity, Search, Filter, ExternalLink } from 'lucide-react';
+import { User, InterviewResult } from '../types';
+import { geminiService } from '../geminiService';
+import { Search, Calendar, Briefcase, Award, ChevronRight, User as UserIcon, LogOut } from 'lucide-react';
 
 interface AdminDashboardProps {
+  user: User;
   onViewResult: (id: string) => void;
+  onLogout: () => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ onViewResult }) => {
-  const [results, setResults] = useState<any[]>([]);
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onViewResult, onLogout }) => {
+  const [results, setResults] = useState<InterviewResult[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem('zynergy_results');
-    if (saved) setResults(JSON.parse(saved));
+    const fetchAllResults = async () => {
+      const data = await geminiService.getAllResults();
+      setResults(data);
+      setLoading(false);
+    };
+    fetchAllResults();
   }, []);
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard title="Total Candidates" value="482" icon={<Users className="text-blue-500" />} change="+12%" />
-        <StatCard title="Interviews Today" value="24" icon={<Activity className="text-emerald-500" />} change="+5%" />
-        <StatCard title="Avg. Confidence" value="76%" icon={<FileText className="text-purple-500" />} change="-2%" />
-        <StatCard title="System Status" value="Online" icon={<div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />} />
-      </div>
-
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-        <div className="p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between gap-4 items-center">
-          <h3 className="text-lg font-bold">Global Interview Logs</h3>
-          <div className="flex gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input 
-                placeholder="Search candidates..." 
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <button className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300">
-              <Filter size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-950/50 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                <th className="px-6 py-4">Candidate</th>
-                <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Facial</th>
-                <th className="px-6 py-4">Vocal</th>
-                <th className="px-6 py-4">Semantic</th>
-                <th className="px-6 py-4">Overall</th>
-                <th className="px-6 py-4">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {results.length > 0 ? results.map((res) => (
-                <tr key={res.id} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xs">
-                        {res.candidateName.charAt(0)}
-                      </div>
-                      <span className="text-sm font-medium">{res.candidateName}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-400">{res.jobRole}</td>
-                  <td className="px-6 py-4 text-sm text-slate-400">{res.date}</td>
-                  <td className="px-6 py-4">
-                    <ScoreBadge value={res.scores.facial} color="blue" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <ScoreBadge value={res.scores.vocal} color="emerald" />
-                  </td>
-                  <td className="px-6 py-4">
-                    <ScoreBadge value={res.scores.semantic} color="purple" />
-                  </td>
-                  <td className="px-6 py-4 font-bold text-slate-200">{res.scores.overall}%</td>
-                  <td className="px-6 py-4">
-                    <button 
-                      onClick={() => onViewResult(res.id)}
-                      className="text-blue-500 hover:text-blue-400 flex items-center gap-1 text-sm font-bold"
-                    >
-                      Report <ExternalLink size={14} />
-                    </button>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center text-slate-600">
-                    No system-wide records available.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  const filteredResults = results.filter(item => 
+    item.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.jobRole.toLowerCase().includes(searchTerm.toLowerCase())
   );
-};
 
-const StatCard = ({ title, value, icon, change }: any) => (
-  <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-    <div className="flex justify-between items-start mb-4">
-      <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
-        {icon}
-      </div>
-      {change && (
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${change.startsWith('+') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-          {change}
-        </span>
-      )}
-    </div>
-    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">{title}</p>
-    <p className="text-2xl font-bold mt-1">{value}</p>
-  </div>
-);
-
-const ScoreBadge = ({ value, color }: { value: number, color: 'blue' | 'emerald' | 'purple' }) => {
-  const colors = {
-    blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    emerald: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-    purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  };
   return (
-    <span className={`px-2 py-1 rounded-md text-[10px] font-bold border ${colors[color]}`}>
-      {value}%
-    </span>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-3xl gap-4 shadow-xl">
+        <div className="flex items-center gap-4">
+             <div className="w-12 h-12 bg-purple-600/20 rounded-xl flex items-center justify-center text-purple-400">
+                <UserIcon size={24} />
+             </div>
+             <div>
+                <h2 className="text-xl font-bold text-white">Admin Portal</h2>
+                <p className="text-sm text-slate-400">Welcome back, {user.name}</p>
+             </div>
+        </div>
+        <button 
+            onClick={onLogout}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+        >
+            <LogOut size={14} /> Sign Out
+        </button>
+      </div>
+
+      {/* Stats/Search */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-1 bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col justify-center text-center">
+            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Interviews</h3>
+            <p className="text-4xl font-black text-white">{results.length}</p>
+        </div>
+        <div className="md:col-span-2 relative">
+           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+           <input 
+             type="text" 
+             placeholder="Search candidates or roles..."
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+             className="w-full h-full bg-slate-950 border border-slate-800 rounded-3xl pl-12 pr-6 text-sm focus:border-purple-500 outline-none transition-all py-6 md:py-0"
+           />
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-6">
+         <h3 className="text-lg font-bold text-white mb-6 pl-2">All Candidate Sessions</h3>
+         
+         <div className="space-y-4">
+            {loading ? (
+                <div className="text-center py-20 text-slate-500">Loading records...</div>
+            ) : filteredResults.length > 0 ? (
+                filteredResults.map((item) => (
+                    <div 
+                      key={item.id}
+                      onClick={() => onViewResult(item.id)}
+                      className="group bg-slate-950/50 hover:bg-slate-800 border border-slate-800/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all cursor-pointer"
+                    >
+                       <div className="flex items-center gap-4 w-full md:w-auto">
+                          <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center font-bold text-slate-400 group-hover:bg-purple-600 group-hover:text-white transition-all shrink-0">
+                             {item.candidateName.charAt(0)}
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-white text-lg">{item.candidateName}</h4>
+                             <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                                <span className="flex items-center gap-1.5"><Briefcase size={12} /> {item.jobRole}</span>
+                                <span className="flex items-center gap-1.5"><Calendar size={12} /> {item.date}</span>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="flex items-center gap-8 w-full md:w-auto justify-between border-t md:border-t-0 border-slate-800 pt-4 md:pt-0">
+                          <div className="flex gap-8">
+                             <div className="text-center">
+                                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">Score</p>
+                                <p className={`text-xl font-bold ${item.scores.overall >= 70 ? 'text-emerald-400' : item.scores.overall >= 50 ? 'text-blue-400' : 'text-amber-400'}`}>
+                                    {item.scores.overall}%
+                                </p>
+                             </div>
+                             <div className="hidden md:block w-px h-10 bg-slate-800" />
+                              <div className="text-center">
+                                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">Status</p>
+                                <p className="text-sm font-bold text-slate-300">Completed</p>
+                             </div>
+                          </div>
+                          <div className="bg-slate-800 p-2 rounded-xl group-hover:bg-purple-600 transition-colors">
+                             <ChevronRight className="text-white" size={20} />
+                          </div>
+                       </div>
+                    </div>
+                ))
+            ) : (
+                <div className="text-center py-20 text-slate-500">No records found matching your search.</div>
+            )}
+         </div>
+      </div>
+    </div>
   );
 };
 

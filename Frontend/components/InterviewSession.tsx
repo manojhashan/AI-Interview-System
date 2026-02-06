@@ -177,11 +177,18 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       details: sessionDetails
     };
 
-    const existingResults = JSON.parse(localStorage.getItem('zynergy_results') || '[]');
-    localStorage.setItem('zynergy_results', JSON.stringify([...existingResults, fullResult]));
-    
-    stopTracks();
-    onComplete();
+    // Save to Database
+    setIsProcessing(true); // Reuse/Show processing state
+    geminiService.saveInterviewResult(fullResult).then(success => {
+        if (success) {
+            console.log("Session saved to DB");
+        } else {
+             alert("Failed to save session to database.");
+        }
+        setIsProcessing(false);
+        stopTracks();
+        onComplete();
+    });
   };
 
   const handleExitInterview = () => {

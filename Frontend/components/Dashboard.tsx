@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, InterviewResult } from '../types';
+import { geminiService } from '../geminiService';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { Plus, ArrowUpRight, Clock, Award } from 'lucide-react';
 
@@ -14,9 +15,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartInterview, onViewRes
   const [results, setResults] = useState<any[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('zynergy_results');
-    if (saved) setResults(JSON.parse(saved).reverse());
-  }, []);
+    if (user.role === 'CANDIDATE') {
+        geminiService.getUserResults(user.id).then(data => {
+            // Sort by date/ID? Assuming backend list order or simple reverse
+            setResults(data.reverse());
+        });
+    }
+  }, [user.id]);
 
   const latestResult = results[0];
   const chartData = latestResult ? [

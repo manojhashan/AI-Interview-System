@@ -36,4 +36,16 @@ def get_dummy_analysis(modality: str):
             "explanation": "Answer is highly relevant to the question with strong logical structuring."
         }
     }
-    return responses.get(modality)
+    # Return a default if modality not found, or specific
+    return responses.get(modality, {"score": 75.0, "explanation": "Good overall performance."})
+
+def get_dummy_answer_analysis():
+    return {
+        "scores": {"overall": 80, "facial": 85, "vocal": 78, "semantic": 77},
+        "feedback": {
+            "facial": "Good eye contact maintained.",
+            "vocal": "Clear voice but slight hesitation.",
+            "semantic": "Answer was relevant but could be more detailed.",
+            "summary": "Solid answer with good delivery."
+        }
+    }

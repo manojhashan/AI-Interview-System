@@ -19,11 +19,45 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<QuestionDetail[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [frames, setFrames] = useState<string[]>([]);
+
+  // Text-to-Speech Logic
+  useEffect(() => {
+    if (step === 'active' && questions[currentQuestionIdx]) {
+      const text = questions[currentQuestionIdx].text;
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Optional: Set voice details (can be enhanced later to select specific voices)
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = isMuted ? 0 : 1;
+
+      // Cancel previous speech to prevent overlapping
+      window.speechSynthesis.cancel();
+      
+      // Small delay for natural feel
+      const timer = setTimeout(() => {
+        if (!isMuted) window.speechSynthesis.speak(utterance);
+      }, 500);
+
+      return () => {
+        clearTimeout(timer);
+        window.speechSynthesis.cancel();
+      };
+    }
+  }, [step, currentQuestionIdx, questions, isMuted]);
+
+  // Clean up speech on component unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
   // Ensure camera stream is attached to the video element whenever the step changes
   useEffect(() => {
@@ -310,12 +344,20 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
             <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Recording In Progress</span>
           </div>
-          <button 
-            onClick={() => setShowExitConfirm(true)}
-            className="flex items-center gap-2 bg-slate-900/50 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 px-4 py-2 rounded-xl text-slate-400 hover:text-red-500 transition-all font-bold text-xs"
-          >
-            <X size={16} /> Exit Session
-          </button>
+          <div className="flex items-center gap-3">
+             <button 
+              onClick={() => setIsMuted(!isMuted)}
+              className="flex items-center gap-2 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 px-4 py-2 rounded-xl text-slate-400 hover:text-white transition-all font-bold text-xs"
+            >
+              {isMuted ? "🔇 Unmute Question" : "🔊 Mute Question"}
+            </button>
+            <button 
+              onClick={() => setShowExitConfirm(true)}
+              className="flex items-center gap-2 bg-slate-900/50 hover:bg-red-500/10 border border-slate-800 hover:border-red-500/30 px-4 py-2 rounded-xl text-slate-400 hover:text-red-500 transition-all font-bold text-xs"
+            >
+              <X size={16} /> Exit Session
+            </button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">

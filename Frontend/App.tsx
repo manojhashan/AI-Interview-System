@@ -14,6 +14,8 @@ import HistoryView from './components/HistoryView';
 import { Trash2, PlusCircle, Briefcase, User as UserIcon } from 'lucide-react';
 import UserProfile from './components/UserProfile';
 
+import { Toaster } from 'react-hot-toast';
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState<string>('landing');
@@ -135,6 +137,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-blue-500/30">
+      <Toaster position="top-right" toastOptions={{
+        style: {
+          background: '#1e293b',
+          color: '#e2e8f0',
+          border: '1px solid rgba(255,255,255,0.1)',
+        },
+      }} />
       {/* Admin Logic */}
       {isAdmin && (
           <div className="max-w-6xl mx-auto p-6 md:p-12">

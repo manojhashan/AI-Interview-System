@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, User, ArrowRight, ArrowLeft, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../types';
 import { geminiService } from '../geminiService';
+import toast from 'react-hot-toast';
 
 interface AuthModalProps {
   initialMode: 'login' | 'signup';
@@ -70,6 +71,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
       }
 
       if (role && nameToUse && userId) {
+         if (view === 'login') {
+             toast.success("Login successful!", {
+               icon: '🎉',
+               style: {
+                 borderRadius: '10px',
+                 background: '#333',
+                 color: '#fff',
+               },
+             });
+         } else if (view === 'signup') {
+             toast.success("Registration successful!", {
+               icon: '🚀',
+               style: {
+                 borderRadius: '10px',
+                 background: '#333',
+                 color: '#fff',
+               },
+             });
+         }
          onSuccess(role, email, nameToUse, userId);
       } else {
          setErrorMsg("Authentication successful but user data missing.");

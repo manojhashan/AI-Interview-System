@@ -55,7 +55,8 @@ export interface QuestionDetail {
 
 export interface InterviewResult {
   id: string;
-  candidateId: string;
+  resumeId: string;
+  candidateId?: string;
   candidateName: string;
   date: string;
   jobRole: string;

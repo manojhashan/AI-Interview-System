@@ -115,7 +115,8 @@ class QuestionDetail(BaseModel):
 
 class InterviewResultData(BaseModel):
     id: Optional[str] = None
-    candidateId: str
+    resumeId: str
+    candidateId: Optional[str] = None
     candidateName: str
     date: str
     jobRole: str
@@ -485,7 +486,7 @@ def save_result(result_data: InterviewResultData, db: Session = Depends(get_db))
     
     db_result = InterviewResult(
         id=result_id,
-        candidate_id=result_data.candidateId,
+        resume_id=result_data.resumeId,
         candidate_name=result_data.candidateName,
         date=result_data.date,
         job_role=result_data.jobRole,
@@ -508,7 +509,8 @@ def save_result(result_data: InterviewResultData, db: Session = Depends(get_db))
 @app.get("/api/results/{user_id}", response_model=List[InterviewResultData])
 def get_user_results(user_id: str, db: Session = Depends(get_db)):
     # Simple history fetch
-    results = db.query(InterviewResult).filter(InterviewResult.candidate_id == user_id).all()
+    # Join with Resume to filter by User ID
+    results = db.query(InterviewResult).join(Resume).filter(Resume.user_id == user_id).all()
     # Sort by date? String date is bad for sorting. Ideally use DateTime. 
     # For now relying on insertion order or frontend sort.
     return [get_result_data(r) for r in results]
@@ -566,7 +568,8 @@ def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get
 def get_result_data(orm_result):
     return InterviewResultData(
         id=orm_result.id,
-        candidateId=orm_result.candidate_id,
+        resumeId=orm_result.resume_id,
+        candidateId=orm_result.resume.user_id if orm_result.resume else "Unknown",
         candidateName=orm_result.candidate_name,
         date=orm_result.date,
         jobRole=orm_result.job_role,

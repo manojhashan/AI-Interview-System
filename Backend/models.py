@@ -31,6 +31,7 @@ class Resume(Base):
     projects = relationship("Project", back_populates="resume", cascade="all, delete-orphan")
     skills = relationship("Skill", back_populates="resume", cascade="all, delete-orphan")
     certificates = relationship("Certificate", back_populates="resume", cascade="all, delete-orphan")
+    interview_results = relationship("InterviewResult", back_populates="resume", cascade="all, delete-orphan")
 
 class Education(Base):
     __tablename__ = "education"
@@ -73,7 +74,7 @@ class InterviewResult(Base):
     __tablename__ = "interview_results"
     
     id = Column(String, primary_key=True, default=generate_uuid)
-    candidate_id = Column(String, ForeignKey("USER.user_id"))
+    resume_id = Column(String, ForeignKey("resume.id"))
     candidate_name = Column(String)
     date = Column(String)
     job_role = Column(String)
@@ -81,6 +82,8 @@ class InterviewResult(Base):
     # Storing complex objects as JSON strings
     scores_json = Column(Text) # Stores ConfidenceScore
     details_json = Column(Text) # Stores List[QuestionDetail]
+    
+    resume = relationship("Resume", back_populates="interview_results")
 
     # No direct relationship needed for simple history fetching, 
     # but we could add one if we wanted to access user.results

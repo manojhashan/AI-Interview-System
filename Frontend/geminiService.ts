@@ -201,17 +201,18 @@ export const geminiService = {
   },
 
   // Interview Result Persistence
-  async saveInterviewResult(result: InterviewResult): Promise<boolean> {
+  async saveInterviewResult(result: InterviewResult): Promise<InterviewResult | null> {
       try {
           const response = await fetch(`${API_BASE_URL}/results`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(result)
           });
-          return response.ok;
+          if (!response.ok) return null;
+          return await response.json();
       } catch (error) {
           console.error("Save Result Error:", error);
-          return false;
+          return null;
       }
   },
 

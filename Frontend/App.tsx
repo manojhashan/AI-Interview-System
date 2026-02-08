@@ -28,6 +28,8 @@ const App: React.FC = () => {
   // Load user resumes from API on login or initialization
   useEffect(() => {
     // Check for saved user on mount
+    /* 
+    // AUTO-LOGIN DISABLED BY USER REQUEST
     const savedUser = localStorage.getItem('zynergy_user');
     if (savedUser && !user) {
         try {
@@ -39,6 +41,7 @@ const App: React.FC = () => {
             localStorage.removeItem('zynergy_user');
         }
     }
+    */
 
     if (user && user.role === UserRole.CANDIDATE) {
       const loadResumes = async () => {
@@ -270,7 +273,14 @@ const App: React.FC = () => {
               {currentPage === 'interview' && user && (
                 <InterviewSession 
                   user={user} 
-                  onComplete={() => setCurrentPage('dashboard')} 
+                  onComplete={(resultId) => {
+                    if (resultId) {
+                      setSelectedResultId(resultId);
+                      setCurrentPage('view-result');
+                    } else {
+                      setCurrentPage('dashboard');
+                    }
+                  }} 
                   onAddResume={() => { setEditingResumeId('new'); setCurrentPage('profile'); }}
                 />
               )}
@@ -286,7 +296,6 @@ const App: React.FC = () => {
                    onBack={() => setCurrentPage('dashboard')}
                 />
               )}
-              {currentPage === 'view-result' && <ResultView resultId={selectedResultId} onBack={() => setCurrentPage('dashboard')} />}
               {currentPage === 'history' && user && <HistoryView userId={user.id} onViewResult={(id) => { setSelectedResultId(id); setCurrentPage('view-result'); }} />}
             </div>
           </main>

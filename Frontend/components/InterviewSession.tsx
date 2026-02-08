@@ -6,7 +6,7 @@ import { Camera, Mic, Play, Square, Loader2, ArrowRight, VideoOff, PlayCircle, P
 
 interface InterviewSessionProps {
   user: User;
-  onComplete: () => void;
+  onComplete: (resultId?: string) => void;
   onAddResume: () => void;
 }
 
@@ -164,9 +164,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
 
     const fullResult: InterviewResult = {
       id: Math.random().toString(36).substr(2, 9),
-      candidateId: user.id,
+      resumeId: selectedResume?.id || "",
+      candidateId: user.id, // Optional now
       candidateName: user.name,
-      date: new Date().toLocaleDateString(),
+      date: new Date().toLocaleString(),
       jobRole: selectedResume?.resumeTitle || "Professional",
       scores: {
         overall: avg('overall'),
@@ -179,15 +180,15 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
 
     // Save to Database
     setIsProcessing(true); // Reuse/Show processing state
-    geminiService.saveInterviewResult(fullResult).then(success => {
-        if (success) {
+    geminiService.saveInterviewResult(fullResult).then(savedResult => {
+        if (savedResult && savedResult.id) {
             console.log("Session saved to DB");
+            stopTracks();
+            onComplete(savedResult.id);
         } else {
              alert("Failed to save session to database.");
+             setIsProcessing(false);
         }
-        setIsProcessing(false);
-        stopTracks();
-        onComplete();
     });
   };
 
@@ -476,9 +477,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       <p className="text-slate-400 mb-10">You have completed all {questions.length} questions for the **{selectedResume?.resumeTitle}** role.</p>
       <button 
         onClick={saveFullSession}
-        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20"
+        disabled={isProcessing}
+        className={`w-full bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        View Full Analysis <ArrowRight size={20} />
+        {isProcessing ? <Loader2 className="animate-spin" /> : <>View Full Analysis <ArrowRight size={20} /></>}
       </button>
     </div>
   );

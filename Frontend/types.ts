@@ -59,6 +59,7 @@ export interface InterviewResult {
   candidateId?: string;
   candidateName: string;
   date: string;
+  time: string;
   jobRole: string;
   scores: ConfidenceScore;
   details: QuestionDetail[];

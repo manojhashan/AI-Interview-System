@@ -77,14 +77,23 @@ class InterviewResult(Base):
     resume_id = Column(String, ForeignKey("resume.id"))
     candidate_name = Column(String)
     date = Column(String)
+    time = Column(String) # Separated time
     job_role = Column(String)
     
-    # Storing complex objects as JSON strings
-    scores_json = Column(Text) # Stores ConfidenceScore
+    # Normalized Scores
+    facial_score = Column(Integer)
+    vocal_score = Column(Integer)
+    semantic_score = Column(Integer)
+    overall_score = Column(Integer)
+
+    # Feedback Columns (Placeholder/Future use)
+    facial_feedback = Column(Text, default="N/A")
+    vocal_feedback = Column(Text, default="N/A")
+    semantic_feedback = Column(Text, default="N/A")
+
     details_json = Column(Text) # Stores List[QuestionDetail]
     
     resume = relationship("Resume", back_populates="interview_results")
 
     # No direct relationship needed for simple history fetching, 
-    # but we could add one if we wanted to access user.results
 

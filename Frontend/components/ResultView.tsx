@@ -52,20 +52,24 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
                <h2 className="text-4xl font-black text-white">{result.jobRole}</h2>
                <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-500/20">AI Verified</span>
             </div>
-            <p className="text-slate-400 font-medium">Session Date: {result.date} • Session ID: #{result.id}</p>
+            <p className="text-slate-400 font-medium">Session: {result.date} at {result.time || ''} • ID: #{result.id}</p>
           </div>
           
           <div className="flex items-center gap-8 bg-slate-950/50 p-8 rounded-3xl border border-slate-800/50 backdrop-blur-md">
              <div className="text-center">
                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Overall Score</p>
-                <p className="text-5xl font-black text-blue-500">{result.scores.overall}%</p>
+                {result.scores.overall === -1 ? (
+                    <p className="text-3xl font-black text-amber-500">INCOMPLETE</p>
+                ) : (
+                    <p className="text-5xl font-black text-blue-500">{result.scores.overall}%</p>
+                )}
              </div>
              <div className="h-14 w-px bg-slate-800" />
              <div className="text-center">
                 <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Proficiency</p>
-                <p className="text-2xl font-black text-emerald-400">
-                   {result.scores.overall >= 80 ? 'EXPERT' : result.scores.overall >= 60 ? 'ADVANCED' : 'INTERMEDIATE'}
-                </p>
+                 <p className="text-2xl font-black text-emerald-400">
+                    {result.scores.overall === -1 ? 'N/A' : (result.scores.overall >= 80 ? 'EXPERT' : result.scores.overall >= 60 ? 'ADVANCED' : 'INTERMEDIATE')}
+                 </p>
              </div>
           </div>
         </div>

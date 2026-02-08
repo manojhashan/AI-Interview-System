@@ -119,6 +119,7 @@ class InterviewResultData(BaseModel):
     candidateId: Optional[str] = None
     candidateName: str
     date: str
+    time: str
     jobRole: str
     scores: ConfidenceScore
     details: List[QuestionDetail] = []
@@ -489,8 +490,20 @@ def save_result(result_data: InterviewResultData, db: Session = Depends(get_db))
         resume_id=result_data.resumeId,
         candidate_name=result_data.candidateName,
         date=result_data.date,
+        time=result_data.time,
         job_role=result_data.jobRole,
-        scores_json=json.dumps(result_data.scores.dict()),
+        
+        # Unpack scores
+        facial_score=int(result_data.scores.facial),
+        vocal_score=int(result_data.scores.vocal),
+        semantic_score=int(result_data.scores.semantic),
+        overall_score=int(result_data.scores.overall),
+        
+        # Placeholder feedback
+        facial_feedback="Excellent eye contact and engagement.", # specific feedback logic to be added
+        vocal_feedback="Clear projection and good pace.",
+        semantic_feedback="Strong alignment with technical requirements.",
+
         details_json=json.dumps([d.dict() for d in result_data.details])
     )
     db.add(db_result)
@@ -566,14 +579,21 @@ def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get
     }
 
 def get_result_data(orm_result):
+    candidate_id = orm_result.resume.user_id if orm_result.resume else "Unknown"
     return InterviewResultData(
         id=orm_result.id,
         resumeId=orm_result.resume_id,
-        candidateId=orm_result.resume.user_id if orm_result.resume else "Unknown",
+        candidateId=candidate_id,
         candidateName=orm_result.candidate_name,
         date=orm_result.date,
+        time=orm_result.time,
         jobRole=orm_result.job_role,
-        scores=json.loads(orm_result.scores_json),
+        scores={
+            "facial": orm_result.facial_score,
+            "vocal": orm_result.vocal_score,
+            "semantic": orm_result.semantic_score,
+            "overall": orm_result.overall_score
+        },
         details=json.loads(orm_result.details_json)
     )
 

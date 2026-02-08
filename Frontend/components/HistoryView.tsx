@@ -72,7 +72,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ userId, onViewResult }) => {
                 <div>
                   <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">{item.jobRole}</h3>
                   <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
-                    <span className="flex items-center gap-1.5"><Calendar size={14} /> {item.date}</span>
+                    <span className="flex items-center gap-1.5"><Calendar size={14} /> {item.date} {item.time ? `• ${item.time}` : ''}</span>
                     <span className="flex items-center gap-1.5"><Briefcase size={14} /> Interview ID: {item.id}</span>
                   </div>
                 </div>
@@ -82,7 +82,11 @@ const HistoryView: React.FC<HistoryViewProps> = ({ userId, onViewResult }) => {
                 <div className="flex gap-6">
                   <div className="text-center">
                     <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">Score</p>
-                    <p className="text-xl font-bold text-blue-500">{item.scores.overall}%</p>
+                    {item.scores.overall === -1 ? (
+                        <p className="text-sm font-bold text-amber-500">INCOMPLETE</p>
+                    ) : (
+                        <p className="text-xl font-bold text-blue-500">{item.scores.overall}%</p>
+                    )}
                   </div>
                   <div className="text-center">
                     <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">Facial</p>

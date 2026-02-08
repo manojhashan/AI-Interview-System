@@ -156,21 +156,25 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
     }
   };
 
-  const saveFullSession = () => {
+  const saveFullSession = (isIncomplete: boolean = false) => {
     if (sessionDetails.length === 0) return;
 
-    const avg = (key: keyof ConfidenceScore) => 
-      Math.round(sessionDetails.reduce((sum, d) => sum + d.scores[key], 0) / sessionDetails.length);
+    // Helper to calculate average safely
+    const avg = (key: keyof ConfidenceScore) => {
+        if (sessionDetails.length === 0) return 0;
+        return Math.round(sessionDetails.reduce((sum, d) => sum + d.scores[key], 0) / sessionDetails.length);
+    };
 
     const fullResult: InterviewResult = {
       id: Math.random().toString(36).substr(2, 9),
       resumeId: selectedResume?.id || "",
       candidateId: user.id, // Optional now
       candidateName: user.name,
-      date: new Date().toLocaleString(),
+      date: new Date().toLocaleDateString(),
+      time: new Date().toLocaleTimeString(),
       jobRole: selectedResume?.resumeTitle || "Professional",
       scores: {
-        overall: avg('overall'),
+        overall: isIncomplete ? -1 : avg('overall'), // -1 indicates incomplete/aborted
         facial: avg('facial'),
         vocal: avg('vocal'),
         semantic: avg('semantic'),
@@ -193,8 +197,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   };
 
   const handleExitInterview = () => {
-    stopTracks();
-    onComplete();
+    if (sessionDetails.length > 0) {
+        // Save partial result
+        saveFullSession(true); 
+    } else {
+        stopTracks();
+        onComplete();
+    }
   };
 
   if (step === 'selection') {
@@ -476,7 +485,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       <h2 className="text-3xl font-bold mb-4 text-white">Session Complete</h2>
       <p className="text-slate-400 mb-10">You have completed all {questions.length} questions for the **{selectedResume?.resumeTitle}** role.</p>
       <button 
-        onClick={saveFullSession}
+        onClick={() => saveFullSession(false)}
         disabled={isProcessing}
         className={`w-full bg-emerald-600 hover:bg-emerald-500 text-white p-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
       >

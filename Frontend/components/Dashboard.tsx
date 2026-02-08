@@ -23,7 +23,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartInterview, onViewRes
     }
   }, [user.id]);
 
-  const latestResult = results[0];
+  // Find latest COMPLETED result (score != -1)
+  const latestResult = results.find(r => r.scores.overall !== -1);
+  
   const chartData = latestResult ? [
     { subject: 'Facial', A: latestResult.scores.facial, fullMark: 100 },
     { subject: 'Vocal', A: latestResult.scores.vocal, fullMark: 100 },
@@ -56,7 +58,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartInterview, onViewRes
            <Award className="absolute right-8 top-8 opacity-20" size={120} />
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col items-center justify-center text-center">
+        <div className="group relative bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col items-center justify-center text-center cursor-help transition-colors hover:border-slate-700">
+            {/* Tooltip */}
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-700 shadow-xl z-20">
+               Incomplete interviews are excluded from calculation
+               <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-800 border-b border-r border-slate-700 transform rotate-45"></div>
+            </div>
+
             <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">Overall Level</h3>
             <div className="relative w-32 h-32 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90 origin-center" viewBox="0 0 128 128">
@@ -91,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartInterview, onViewRes
                   <span className="text-3xl font-bold text-white">{score}%</span>
                 </div>
             </div>
-            <p className="mt-4 text-xs text-slate-500">Based on your latest session</p>
+            <p className="mt-4 text-xs text-slate-500">Based on your latest complete session</p>
         </div>
       </div>
 
@@ -102,12 +110,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartInterview, onViewRes
             {results.length > 0 ? results.map((res) => (
               <div key={res.id} className="group bg-slate-950/50 hover:bg-slate-800 border border-slate-800/50 p-4 rounded-2xl flex items-center justify-between transition-all cursor-pointer" onClick={() => onViewResult(res.id)}>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 font-bold group-hover:bg-blue-500 group-hover:text-white transition-all">
-                    {res.scores.overall}
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold transition-all ${res.scores.overall === -1 ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white'}`}>
+                    {res.scores.overall === -1 ? 'N/A' : res.scores.overall}
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-200">{res.jobRole} Interview</h4>
-                    <p className="text-xs text-slate-500">{res.date}</p>
+                    <p className="text-xs text-slate-500">{res.date} • {res.time}</p>
                   </div>
                 </div>
                 <ArrowUpRight className="text-slate-600 group-hover:text-white transition-all" size={20} />

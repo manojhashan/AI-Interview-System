@@ -97,6 +97,24 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
         </div>
       </div>
 
+      {/* OVERALL AI FEEDBACK */}
+      {result.feedback && (
+          <div className="bg-gradient-to-r from-blue-900/40 to-slate-900/40 border border-blue-500/20 rounded-[2rem] p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <MessageSquare size={100} className="text-blue-400" />
+              </div>
+              <div className="relative z-10">
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
+                      <Award className="text-blue-400" size={24} />
+                      Overall AI Feedback
+                  </h3>
+                  <div className="bg-slate-950/50 p-6 rounded-2xl border border-blue-500/10 text-slate-300 leading-relaxed text-lg">
+                      {result.feedback}
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* DETAILED BREAKDOWN BY QUESTION */}
       <div className="space-y-6">
          <div className="flex items-center gap-3 mb-4">
@@ -145,8 +163,12 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
                            <div className="flex gap-3 bg-blue-500/5 p-4 rounded-xl border border-blue-500/10">
                               <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
                               <p className="text-xs text-slate-400 leading-relaxed">
-                                 <span className="text-blue-300 font-bold">Observation: </span>
-                                 {detail.feedback.semantic}
+                                 <span className="text-blue-300 font-bold">Analysis: </span>
+                                 {detail.feedback.semantic.split('|').map((part, i) => (
+                                     <span key={i} className="block mt-1">
+                                        {part.trim()}
+                                     </span>
+                                 ))}
                               </p>
                            </div>
                         </div>

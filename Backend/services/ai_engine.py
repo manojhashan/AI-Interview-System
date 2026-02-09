@@ -1,7 +1,7 @@
 import random
 from services.semantic_analyzer import analyze_semantic
 
-from services.question_generator import generate_questions_local
+from services.question_generator import generate_questions_local, generate_feedback_t5
 
 def simulate_question_generation(cv_text: str, job_role: str):
     # Use the local LLM to generate questions
@@ -95,7 +95,14 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     # 1. Real Semantic Analysis
     semantic_result = analyze_semantic(question, answer)
     semantic_score = semantic_result["score"]
-    semantic_feedback = semantic_result["feedback"]
+    
+    # Generate T5 Feedback
+    t5_feedback = generate_feedback_t5(question, answer)
+    
+    # Combine semantic score feedback with T5's explanation
+    # semantic_result["feedback"] gives a generic "Good/Bad based on score"
+    # t5_feedback gives "Strength: ... Weakness: ..."
+    semantic_feedback = f"{semantic_result['feedback']} | {t5_feedback}"
 
     # 2. Mock Facial Analysis (Placeholder for future Model Integration)
     # TODO: Load .h5 model and predict using 'frames'

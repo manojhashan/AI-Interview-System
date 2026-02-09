@@ -91,3 +91,94 @@ def generate_questions_local(resume_text: str, job_role: str, count: int = 5) ->
         logger.error(f"Error during generation: {e}")
         # Fallback to dummy if generation fails
         return []
+
+def generate_feedback_t5(question: str, answer: str, job_role: str = "Candidate") -> str:
+    """
+    Generates brief feedback (Strength/Weakness) for a single answer using Flan-T5.
+    """
+    if not answer or len(answer.strip()) < 5:
+        return "Answer too short to evaluate."
+
+    try:
+        tokenizer, model = get_model_and_tokenizer()
+        
+        # Improved Prompt specifically for Flan-T5 structure
+        prompt = (
+            f"Context: Interview for {job_role}.\n"
+            f"Question: {question}\n"
+            f"Candidate Answer: {answer}\n\n"
+            f"Task: Provide a brief feedback listing one Strength and one Improvement.\n"
+            f"Response:"
+        )
+        
+        input_ids = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).input_ids
+        
+        outputs = model.generate(
+            input_ids, 
+            max_length=150, 
+            num_beams=2, # Reduced beams for speed/stability
+            do_sample=True, # Enable sampling for more natural text
+            temperature=0.7,
+            top_p=0.9
+        )
+        
+        feedback = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+        # Fallback if empty
+        if not feedback or len(feedback) < 5:
+            return "Feedback generation inconclusive."
+            
+        return feedback
+
+    except Exception as e:
+        logger.error(f"Feedback generation failed: {e}")
+        return "Feedback unavailable due to error."
+
+def generate_overall_summary_t5(interview_details: list, job_role: str) -> str:
+    """
+    Generates an overall summary/advice based on all Q&A pairs using Flan-T5.
+    """
+    try:
+        tokenizer, model = get_model_and_tokenizer()
+        
+        # Aggregate feedback or answers
+        # Since T5 context is small, we can't send all text.
+        # Strategy: Send the job role and maybe the strengths/weaknesses if we have pre-calculated them, 
+        # or simplified Q&A.
+        # Let's try sending a concatenated string of "Q: ... A: ..." for the first 3-5 Qs or just the feedbacks?
+        # Better: "Based on these answers for {job_role}, provide 3 key improvements."
+        
+        # We will take the first 3 answers + last answer to get a mix, or just truncate.
+        combined_text = ""
+        for i, detail in enumerate(interview_details):
+            if i > 4: break # Limit to first 5 interactions to save tokens
+            q_text = detail.get('question', '')[:50]
+            a_text = detail.get('answer', '')[:100]
+            combined_text += f"Q: {q_text}... A: {a_text}...\n"
+
+        prompt = (
+            f"Review this interview for {job_role}.\n"
+            f"{combined_text}\n"
+            f"Task: Write a short paragraph (2-3 sentences) giving overall advice to the candidate.\n"
+            f"Advice:"
+        )
+        
+        input_ids = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512).input_ids
+        
+        outputs = model.generate(
+            input_ids, 
+            max_length=150, 
+            num_beams=2, 
+            do_sample=True,
+            temperature=0.7
+        )
+        
+        summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        if not summary or len(summary) < 10:
+             return "Overall performance was good. Focus on providing more specific examples in your answers."
+             
+        return summary
+
+    except Exception as e:
+        logger.error(f"Overall summary generation failed: {e}")
+        return "Could not generate overall summary."

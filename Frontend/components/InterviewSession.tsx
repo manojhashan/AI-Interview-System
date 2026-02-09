@@ -107,26 +107,83 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
     }
   };
 
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState(""); // meaningful variable for UI feedback
+  const recognitionRef = useRef<any>(null);
+
   const handleStartRecording = () => {
     setIsRecording(true);
+    setTranscript(""); 
+    setInterimTranscript("");
+    
+    // Start Video Capture Loop
     const intervalId = setInterval(captureFrame, 2000);
     (window as any)._frameCaptureInterval = intervalId;
+
+    // Start Speech Recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: any) => {
+            let final = '';
+            let interim = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    final += event.results[i][0].transcript + ' ';
+                } else {
+                    interim += event.results[i][0].transcript;
+                }
+            }
+            
+            if (final) {
+                setTranscript(prev => prev + final);
+            }
+            setInterimTranscript(interim);
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            if (event.error === 'not-allowed') {
+                alert("Microphone access denied. Please allow permission.");
+            }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+    } else {
+        alert("Your browser does not support Speech Recognition. Please use Chrome or Edge.");
+    }
   };
 
   const handleStopRecording = async () => {
     setIsRecording(false);
     clearInterval((window as any)._frameCaptureInterval);
     
+    if (recognitionRef.current) {
+        recognitionRef.current.stop();
+    }
+    
     setIsProcessing(true);
     try {
       const question = questions[currentQuestionIdx].text;
-      const mockAnswer = "Based on my professional background, I apply industry-standard methodologies to solve complex technical challenges while ensuring team collaboration and quality outcomes.";
       
-      const analysis = await geminiService.analyzeAnswer(question, mockAnswer, undefined, frames);
+      // Combine final and any remaining interim transcript
+      const fullTranscript = (transcript + interimTranscript).trim();
+      
+      const answerText = fullTranscript.length > 0 
+        ? fullTranscript 
+        : "No audio detected. (Please ensure you speak clearly or check microphone permissions)"; 
+      
+      const analysis = await geminiService.analyzeAnswer(question, answerText, undefined, frames);
       
       const newDetail: QuestionDetail = {
         question: question,
-        answer: mockAnswer,
+        answer: answerText,
         scores: analysis.scores,
         feedback: analysis.feedback
       };
@@ -136,6 +193,8 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       if (currentQuestionIdx < questions.length - 1) {
         setCurrentQuestionIdx(prev => prev + 1);
         setFrames([]);
+        setTranscript("");
+        setInterimTranscript("");
       } else {
         setStep('finished');
       }
@@ -423,34 +482,46 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
             <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl h-full flex flex-col justify-center text-center space-y-8">
               <p className="text-slate-400 text-sm">Use the controls below to answer. AI analyzes your behavior in real-time.</p>
               
-              <div className="flex flex-col gap-4">
+              <div className="flex justify-center gap-6">
                 {!isRecording ? (
-                  <button 
-                    onClick={handleStartRecording}
-                    disabled={isProcessing}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white p-6 rounded-2xl font-bold transition-all shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 group"
-                  >
-                    <Play className="group-hover:scale-110 transition-transform" /> Start Answering
-                  </button>
+                   <button
+                     onClick={handleStartRecording}
+                     disabled={isProcessing}
+                     className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-bold flex items-center gap-3 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                     <Mic size={20} />
+                     Start Answer
+                   </button>
                 ) : (
-                  <button 
-                    onClick={handleStopRecording}
-                    disabled={isProcessing}
-                    className="w-full bg-red-600 hover:bg-red-500 text-white p-6 rounded-2xl font-bold transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-3"
-                  >
-                    <Square /> Finish Answer
-                  </button>
-                )}
-
-                {isProcessing && (
-                  <div className="p-4 bg-slate-800 rounded-xl flex items-center justify-center gap-3 animate-pulse">
-                    <Loader2 className="animate-spin text-blue-400" />
-                    <span className="text-blue-400 font-medium">AI Multimodal Engine...</span>
-                  </div>
+                   <button
+                     onClick={handleStopRecording}
+                     className="bg-red-500 hover:bg-red-400 text-white px-8 py-3 rounded-full font-bold flex items-center gap-3 transition-all shadow-lg shadow-red-500/20 animate-pulse"
+                   >
+                     <Square size={20} fill="currentColor" />
+                     Stop Answer
+                   </button>
                 )}
               </div>
 
-              <div className="pt-8 border-t border-slate-800 grid grid-cols-3 gap-2 opacity-50">
+              {/* Live Transcript Display */}
+              {(transcript || interimTranscript) && (
+                  <div className="mt-4 max-w-2xl mx-auto bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                      <p className="text-slate-400 text-sm mb-1">Live Transcript:</p>
+                      <p className="text-white text-lg font-medium text-left">
+                          {transcript} <span className="text-slate-400 italic">{interimTranscript}</span>
+                      </p>
+                  </div>
+              )}
+            
+              {isProcessing && (
+                <div className="p-4 bg-slate-800 rounded-xl flex items-center justify-center gap-3 animate-pulse">
+                  <Loader2 className="animate-spin text-blue-400" />
+                  <span className="text-blue-400 font-medium">AI Multimodal Engine Analyzing...</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-8 border-t border-slate-800 grid grid-cols-3 gap-2 opacity-50">
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mb-2">
                         <Camera size={16} className="text-blue-400" />
@@ -473,7 +544,6 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
             </div>
           </div>
         </div>
-      </div>
     );
   }
 

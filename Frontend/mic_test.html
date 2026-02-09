@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mic Test</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        background: #111;
+        color: #fff;
+      }
+      #status {
+        padding: 10px;
+        border: 1px solid #333;
+        margin-bottom: 10px;
+      }
+      #output {
+        padding: 20px;
+        border: 1px solid #444;
+        min-height: 100px;
+        background: #222;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .error {
+        color: #ff4444;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Microphone & Speech API Test</h1>
+    <p>
+      Click "Start Listening" and speak. If you see text below, your mic is
+      working.
+    </p>
+
+    <button id="btn" onclick="toggleAnalysis()">Start Listening</button>
+    <div id="status">Status: Idle</div>
+    <div id="output"></div>
+
+    <script>
+      const output = document.getElementById("output");
+      const status = document.getElementById("status");
+      const btn = document.getElementById("btn");
+      let recognition;
+      let isListening = false;
+
+      if (
+        "webkitSpeechRecognition" in window ||
+        "SpeechRecognition" in window
+      ) {
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+
+        recognition.onstart = () => {
+          isListening = true;
+          status.innerText = "Status: 🔴 Listening... (Speak now)";
+          btn.innerText = "Stop Listening";
+          output.innerHTML = "";
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          status.innerText = "Status: ⏹️ Stopped";
+          btn.innerText = "Start Listening";
+        };
+
+        recognition.onresult = (event) => {
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          output.innerHTML = `<strong>Final:</strong> ${finalTranscript}<br><em>Interim:</em> ${interimTranscript}`;
+        };
+
+        recognition.onerror = (event) => {
+          status.innerHTML = `<span class="error">Error: ${event.error}</span>`;
+          console.error(event.error);
+        };
+      } else {
+        output.innerHTML =
+          '<span class="error">Browser not supported. Use Chrome/Edge.</span>';
+        btn.disabled = true;
+      }
+
+      function toggleAnalysis() {
+        if (isListening) {
+          recognition.stop();
+        } else {
+          recognition.start();
+        }
+      }
+    </script>
+  </body>
+</html>

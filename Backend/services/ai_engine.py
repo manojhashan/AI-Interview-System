@@ -4,6 +4,7 @@ from services.semantic_analyzer import analyze_semantic
 from services.question_generator import generate_questions_local, generate_feedback_t5
 
 def simulate_question_generation(cv_text: str, job_role: str):
+    # 22. Generate Interview Questions
     # Use the local LLM to generate questions
     # Fallback to hardcoded if generation fails or returns empty
     try:
@@ -16,6 +17,7 @@ def simulate_question_generation(cv_text: str, job_role: str):
             questions = []
 
         # 1. Standard Intro (4 Questions)
+        # We always start with these 4 basic questions.
         intro_questions = [
             {"id": "intro1", "text": "Can you start by introducing yourself?", "category": "Common"},
             {"id": "intro2", "text": "What motivates you to apply for this role?", "category": "Common"},
@@ -30,7 +32,8 @@ def simulate_question_generation(cv_text: str, job_role: str):
             {"id": "sit3", "text": "If a project is falling behind schedule, what steps do you take?", "category": "Situational"}
         ]
         
-        # Combine: 4 Intro + Generated (up to 6) + 3 Situational
+        # 3. Combine All Questions
+        # We force a mix: 4 Intro + Generated + 3 Situational to make a full interview.
         # If generated is less than 6, we insert them all. 
         # Ideally we want exactly 13.
         
@@ -93,10 +96,12 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     """
     
     # 1. Real Semantic Analysis
+    # 23. Evaluate Candidate Answers
     semantic_result = analyze_semantic(question, answer)
     semantic_score = semantic_result["score"]
     
     # Generate T5 Feedback
+    # 25. Generate Vocal Feedback (Simulated here with T5 text feedback for now as placeholder)
     t5_feedback = generate_feedback_t5(question, answer)
     
     # Combine semantic score feedback with T5's explanation
@@ -104,7 +109,9 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     # t5_feedback gives "Strength: ... Weakness: ..."
     semantic_feedback = f"{semantic_result['feedback']} | {t5_feedback}"
 
-    # 2. Mock Facial Analysis (Placeholder for future Model Integration)
+    # 2. Mock Facial Analysis (Placeholder)
+    # 28. Generate Facial Feedback
+    # Since we don't have a real Face AI yet, we guess a number between 75-95.
     # TODO: Load .h5 model and predict using 'frames'
     facial_score = random.randint(75, 95) 
     facial_feedback = "Good eye contact maintained."
@@ -115,7 +122,9 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     vocal_feedback = "Clear voice but slight hesitation."
 
     # 4. Calculate Overall Score (Weighted Average)
-    # Weighting: Semantic 40%, Facial 30%, Vocal 30%
+    # 26. Store Vocal Analysis Results (Returned in structure)
+    # 29. Store Facial Analysis Results (Returned in structure)
+    # We combine all scores. Semantic (meaning) is 40%, Face and Voice are 30% each.
     overall_score = int((semantic_score * 0.4) + (facial_score * 0.3) + (vocal_score * 0.3))
 
     return {

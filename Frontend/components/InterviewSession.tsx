@@ -69,7 +69,11 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   const startSetup = async () => {
     if (!selectedResume) return;
     setStep('setup');
+    // 1. Get Camera & Mic
+    // We ask permission to use the camera and microphone.
     try {
+      // 18. Device Access Validation
+      // 24. Capture Audio Input
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { width: 1280, height: 720 }, 
         audio: true 
@@ -86,6 +90,8 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       );
       setQuestions(generated);
       setIsProcessing(false);
+      // 2. Generate Questions
+      // The AI reads the resume and makes up questions.
     } catch (err) {
       console.error("Camera error:", err);
       alert("Please grant camera and microphone permissions to proceed.");
@@ -93,13 +99,17 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   };
 
   const startInterview = () => {
+    // 20. Readiness Confirmation Handling
+    // 20. Readiness Confirmation Handling
     setStep('active');
   };
 
   const captureFrame = () => {
     if (videoRef.current && canvasRef.current) {
+        // 27. Capture Facial Expressions
       const context = canvasRef.current.getContext('2d');
       if (context) {
+        // 27. Capture Facial Expressions
         context.drawImage(videoRef.current, 0, 0, 400, 300);
         const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.5);
         setFrames(prev => [...prev.slice(-4), dataUrl]); 
@@ -115,6 +125,9 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
     setIsRecording(true);
     setTranscript(""); 
     setInterimTranscript("");
+    
+    // 3. Start Recording
+    // This turns on the microphone to listen to the answer.
     
     // Start Video Capture Loop
     const intervalId = setInterval(captureFrame, 2000);
@@ -241,6 +254,9 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
       details: sessionDetails
     };
 
+    // 4. Save Everything
+    // We send all the answers and scores to the database.
+
     // Save to Database
     setIsProcessing(true); // Reuse/Show processing state
     geminiService.saveInterviewResult(fullResult).then(savedResult => {
@@ -256,6 +272,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   };
 
   const handleExitInterview = () => {
+    // 21. Early Interview Termination
     if (sessionDetails.length > 0) {
         // Save partial result
         saveFullSession(true); 
@@ -274,6 +291,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 17. Candidate Eligibility Verification (Selected Profile) */}
           <div 
             onClick={onAddResume}
             className="bg-slate-900/50 border-2 border-dashed border-slate-800 p-8 rounded-3xl flex flex-col items-center justify-center text-center hover:border-blue-500/50 hover:bg-slate-900 transition-all cursor-pointer group"
@@ -326,6 +344,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
   if (step === 'setup') {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-2xl mx-auto text-center animate-in zoom-in duration-300">
+        {/* 19. Interview Environment Initialization */}
         <h2 className="text-3xl font-bold mb-2 text-white">Final Check</h2>
         <p className="text-slate-500 mb-8">Role: {selectedResume?.resumeTitle}</p>
         <div className="aspect-video bg-slate-950 rounded-2xl mb-8 overflow-hidden relative flex items-center justify-center border border-slate-800 shadow-inner">

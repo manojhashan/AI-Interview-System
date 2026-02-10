@@ -31,6 +31,7 @@ def generate_questions_local(resume_text: str, job_role: str, count: int = 5) ->
     """
     Generates interview questions based on the resume text and job role.
     """
+    # This acts like a smart interviewer. It reads the resume and creates custom questions.
     try:
         tokenizer, model = get_model_and_tokenizer()
         
@@ -72,7 +73,8 @@ def generate_questions_local(resume_text: str, job_role: str, count: int = 5) ->
             question = tokenizer.decode(outputs[0], skip_special_tokens=True)
             generated_questions.append(question)
 
-        # Map to the format required by frontend
+        # 5. Format Questions
+        # We clean up the questions and give them IDs so the frontend can use them.
         formatted_questions = []
         # Categories mapping roughly to the prompts order
         categories = ["Technical", "Technical", "Technical", "Technical", "Situational", "Situational", "Technical", "Common"]

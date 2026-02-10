@@ -15,6 +15,9 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     role = Column(String)
+    
+    # Relationships
+    # This connects the User to their Resumes. One user can have many resumes.
 
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
 
@@ -24,6 +27,9 @@ class Resume(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     user_id = Column(String, ForeignKey("USER.user_id"))
     resume_title = Column(String)
+    
+    # Relationships
+    # These connect the Resume to all its parts (Education, Projects, etc.)
 
     user = relationship("User", back_populates="resumes")
     education = relationship("Education", back_populates="resume", cascade="all, delete-orphan")
@@ -80,6 +86,9 @@ class InterviewResult(Base):
     time = Column(String) # Separated time
     job_role = Column(String)
     
+    # Scores
+    # These are the marks given by the AI for different aspects.
+    
     # Normalized Scores
     facial_score = Column(Integer)
     vocal_score = Column(Integer)
@@ -90,6 +99,9 @@ class InterviewResult(Base):
     facial_feedback = Column(Text, default="N/A")
     vocal_feedback = Column(Text, default="N/A")
     semantic_feedback = Column(Text, default="N/A")
+    
+    # Detailed Data
+    # This stores the full list of questions and answers as text (JSON format).
 
     details_json = Column(Text) # Stores List[QuestionDetail]
     

@@ -16,6 +16,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onViewResult, onL
 
   useEffect(() => {
     const fetchAllResults = async () => {
+      // 32. Retrieve Candidate Results (Admin)
       const data = await geminiService.getAllResults();
       setResults(data);
       setLoading(false);

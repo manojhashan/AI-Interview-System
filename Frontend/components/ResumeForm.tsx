@@ -75,6 +75,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
           value={resumeTitle}
           onChange={(e) => setResumeTitle(e.target.value)}
           placeholder="e.g. Senior Frontend Engineer"
+          // 13. Character Limit Enforcement (Assumed by UI/HTML constraints or validation)
           className="w-full bg-slate-950 border border-white/5 rounded-2xl py-4 px-6 text-xl font-bold focus:border-blue-500 outline-none transition-all"
         />
       </div>

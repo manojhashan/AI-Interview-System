@@ -30,6 +30,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
     setLoading(true);
     setErrorMsg(null);
 
+    // This function runs when you click "Login" or "Sign Up".
+
     try {
       let role: UserRole | undefined;
       let nameToUse: string | undefined;
@@ -47,6 +49,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
         userId = result.data.user_id;
       
       } else if (view === 'signup') {
+        // 4. Confirm Password Match
         if (password !== confirmPassword) {
             setErrorMsg("Passwords do not match");
             setLoading(false);
@@ -103,6 +106,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
     }
   };
 
+  // 1. Forgot Password Click
+  // This runs when you type your email and ask for a code.
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -117,6 +122,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
     }
   };
 
+  // 2. Verify Code Click
+  // This runs when you type the 4-digit code and click Verify.
   const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -133,6 +140,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
     }
   };
   
+  // 3. Reset Password Click
+  // This runs when you type your new password and confirm.
   const handleResetPassword = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
@@ -195,6 +204,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Full Name</label>
                 <div className="relative">
+                  {/* 1. Validate Mandatory Fields */}
+                  {/* 12. Mandatory Field Validation */}
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input 
                     required 
@@ -218,6 +229,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
                 <div className="relative">
+                  {/* 2. Validate Email Format */}
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input required value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="w-full bg-slate-950 border border-white/5 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500/50 transition-all text-sm" placeholder="name@example.com" />
                 </div>
@@ -228,6 +240,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
                 <div className="relative">
+                  {/* 3. Validate Password Strength */}
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                   <input 
                     required 

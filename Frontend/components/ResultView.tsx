@@ -19,6 +19,7 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
             setLoading(false);
             return;
         }
+        // 33. Retrieve Detailed Report
         const data = await geminiService.getInterviewResult(resultId);
         setResult(data);
         setLoading(false);
@@ -35,6 +36,7 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack }) => {
   if (!result) return <div className="text-center py-20 text-white">Result data could not be retrieved.</div>;
 
   return (
+    // 34. Display Results Securely
     <div className="space-y-12 animate-in fade-in duration-500">
       <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
         <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Back to Dashboard

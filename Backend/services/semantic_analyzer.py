@@ -30,6 +30,7 @@ def analyze_semantic(question: str, answer: str) -> dict:
     Analyzes the semantic relationship between the question and the answer.
     Returns a score (0-100) and feedback.
     """
+    # This checks if the answer matches the question's meaning.
     if not answer or len(answer.strip()) < 5:
         return {
             "score": 10,
@@ -47,6 +48,9 @@ def analyze_semantic(question: str, answer: str) -> dict:
 
         # Compute cosine similarity
         cosine_scores = util.cos_sim(embeddings[0], embeddings[1])
+        
+        # We calculate how close the two sentences are mathmatically.
+        # 1.0 means identical, 0.0 means completely different.
         
         # Convert tensor to float
         similarity_score = float(cosine_scores[0][0])

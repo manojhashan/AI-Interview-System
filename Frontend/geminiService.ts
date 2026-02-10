@@ -61,6 +61,7 @@ export const geminiService = {
   },
 
   // Auth Methods
+  // These functions handle logging in, signing up, and password resets.
   async login(email: string, password: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       const formData = new URLSearchParams();
@@ -90,6 +91,7 @@ export const geminiService = {
   },
 
   async signup(email: string, password: string, firstName: string, lastName: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    // This sends the new user's details to the backend to create an account.
     try {
       const response = await fetch(`http://localhost:5000/auth/signup`, {
         method: "POST",
@@ -118,6 +120,8 @@ export const geminiService = {
   },
 
   async forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+      // 1. Request OTP
+      // We ask the backend to send a code to this email.
       try {
           const response = await fetch(`http://localhost:5000/auth/forgot-password`, {
               method: 'POST',
@@ -133,6 +137,8 @@ export const geminiService = {
   },
 
   async verifyOtp(email: string, otp: string): Promise<{ success: boolean; message?: string; error?: string }> {
+      // 2. Check Code
+      // We send the code the user typed to see if it's correct.
       try {
           const response = await fetch(`http://localhost:5000/auth/verify-otp`, {
               method: 'POST',
@@ -148,6 +154,8 @@ export const geminiService = {
   },
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+      // 3. New Password
+      // If code is correct, we save the new password.
       try {
           const response = await fetch(`http://localhost:5000/auth/reset-password`, {
               method: 'POST',

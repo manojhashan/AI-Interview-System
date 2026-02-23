@@ -53,6 +53,16 @@ export interface QuestionDetail {
   };
 }
 
+export interface XaiExplanation {
+  contributions: { vocal: number; facial: number; semantic: number };
+  strongest: string;
+  weakest: string;
+  vocal_xai: string;
+  facial_xai: string;
+  semantic_xai: string;
+  summary_xai: string;
+}
+
 export interface InterviewResult {
   id: string;
   resumeId: string;
@@ -64,4 +74,5 @@ export interface InterviewResult {
   scores: ConfidenceScore;
   feedback?: string;
   details: QuestionDetail[];
+  xai?: XaiExplanation;
 }

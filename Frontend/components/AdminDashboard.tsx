@@ -51,12 +51,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onViewResult, onL
       </div>
 
       {/* Stats/Search */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col justify-center text-center">
-            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total Interviews</h3>
+      <div className="grid md:grid-cols-4 gap-6">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col justify-center text-center">
+            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Total</h3>
             <p className="text-4xl font-black text-white">{results.length}</p>
         </div>
-        <div className="md:col-span-2 relative">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col justify-center text-center">
+            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Completed</h3>
+            <p className="text-4xl font-black text-emerald-400">{results.filter(r => r.scores.overall !== -1).length}</p>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex flex-col justify-center text-center">
+            <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Incomplete</h3>
+            <p className="text-4xl font-black text-amber-400">{results.filter(r => r.scores.overall === -1).length}</p>
+        </div>
+        <div className="md:col-span-1 relative">
            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
            <input 
              type="text" 

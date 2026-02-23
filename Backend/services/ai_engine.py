@@ -4,6 +4,7 @@ import json
 
 from services.semantic_analyzer import analyze_semantic
 from services.emotion_analyzer import analyze_frames as analyze_emotion_frames
+from services.xai_explainer import generate_xai_feedback
 
 
 # Configure Gemini
@@ -248,22 +249,33 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     # 4. Calculate Overall Score (Weighted Average)
     # 26. Store Vocal Analysis Results (Returned in structure)
     # 29. Store Facial Analysis Results (Returned in structure)
-    # We combine all scores. Semantic (meaning) is 40%, Face and Voice are 30% each.
-    overall_score = int((semantic_score * 0.4) + (facial_score * 0.3) + (vocal_score * 0.3))
+    # We combine all scores. Vocal and Facial are 40% each, Semantic is 20%.
+    overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
+
+    # 5. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
+    dominant_emotion = facial_result.get("dominant_emotion", "Neutral")
+    xai_explanation  = generate_xai_feedback(
+        vocal_score    = float(vocal_score),
+        facial_score   = float(facial_score),
+        semantic_score = float(semantic_score),
+        overall_score  = float(overall_score),
+        dominant_emotion = dominant_emotion
+    )
 
     return {
         "scores": {
             "overall": overall_score,
-            "facial": facial_score,
-            "vocal": vocal_score,
+            "facial":  facial_score,
+            "vocal":   vocal_score,
             "semantic": semantic_score
         },
         "feedback": {
-            "facial": facial_feedback,
-            "vocal": vocal_feedback,
+            "facial":   facial_feedback,
+            "vocal":    vocal_feedback,
             "semantic": semantic_feedback,
-            "summary": "AI Analysis Complete."
-        }
+            "summary":  "AI Analysis Complete."
+        },
+        "xai": xai_explanation   # Explainable AI block
     }
 
 # Alias for backward compatibility if main.py calls get_dummy_answer_analysis directly

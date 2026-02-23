@@ -157,7 +157,7 @@ const App: React.FC = () => {
                     onLogout={handleLogout}
                   />
                )}
-               {currentPage === 'view-result' && <ResultView resultId={selectedResultId} onBack={() => setCurrentPage('dashboard')} />}
+               {currentPage === 'view-result' && <ResultView resultId={selectedResultId} onBack={() => setCurrentPage('dashboard')} isAdmin={true} />}
           </div>
       )}
 
@@ -285,7 +285,7 @@ const App: React.FC = () => {
                 />
               )}
               
-              {currentPage === 'view-result' && <ResultView resultId={selectedResultId} onBack={() => setCurrentPage('dashboard')} />}
+              {currentPage === 'view-result' && <ResultView resultId={selectedResultId} onBack={() => setCurrentPage('dashboard')} isAdmin={false} />}
               {currentPage === 'user-profile' && user && (
                 <UserProfile 
                    user={user} 

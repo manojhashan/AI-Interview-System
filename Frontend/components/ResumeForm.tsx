@@ -73,6 +73,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
         <input 
           required
           value={resumeTitle}
+          maxLength={100}
           onChange={(e) => setResumeTitle(e.target.value)}
           placeholder="e.g. Senior Frontend Engineer"
           // 13. Character Limit Enforcement (Assumed by UI/HTML constraints or validation)
@@ -87,6 +88,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
           icon={<Wrench size={18} className="text-blue-400" />} 
           label="skill"
           items={skills}
+          maxLength={50}
           onAdd={() => addItem(setSkills, skills, '')}
           onUpdate={(idx, val) => updateItem(setSkills, skills, idx, val)}
           onRemove={(idx) => removeItem(setSkills, skills, idx)}
@@ -98,6 +100,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
           icon={<Award size={18} className="text-emerald-400" />} 
           label="certificate_name"
           items={certificates}
+          maxLength={100}
           onAdd={() => addItem(setCertificates, certificates, '')}
           onUpdate={(idx, val) => updateItem(setCertificates, certificates, idx, val)}
           onRemove={(idx) => removeItem(setCertificates, certificates, idx)}
@@ -109,6 +112,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
           icon={<GraduationCap size={18} className="text-purple-400" />} 
           label="Course_name"
           items={education}
+          maxLength={200}
           onAdd={() => addItem(setEducation, education, '')}
           onUpdate={(idx, val) => updateItem(setEducation, education, idx, val)}
           onRemove={(idx) => removeItem(setEducation, education, idx)}
@@ -120,6 +124,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
           icon={<Rocket size={18} className="text-orange-400" />} 
           label="Project_title"
           items={projects}
+          maxLength={500}
           onAdd={() => addItem(setProjects, projects, '')}
           onUpdate={(idx, val) => updateItem(setProjects, projects, idx, val)}
           onRemove={(idx) => removeItem(setProjects, projects, idx)}
@@ -142,6 +147,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Job Role</label>
                     <input 
                       value={exp.job_role} 
+                      maxLength={100}
                       onChange={(e) => {
                         const newExp = [...experience];
                         newExp[idx].job_role = e.target.value;
@@ -213,7 +219,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ existingResume, onSave, onCance
   );
 };
 
-const Section = ({ title, icon, label, items, onAdd, onUpdate, onRemove }: any) => (
+const Section = ({ title, icon, label, items, maxLength, onAdd, onUpdate, onRemove }: any) => (
   <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl h-full flex flex-col">
     <div className="flex justify-between items-center mb-6">
        <h3 className="text-lg font-bold flex items-center gap-2">{icon} {title}</h3>
@@ -226,6 +232,7 @@ const Section = ({ title, icon, label, items, onAdd, onUpdate, onRemove }: any) 
          <div key={idx} className="flex gap-2">
            <input 
              value={item} 
+             maxLength={maxLength}
              onChange={(e) => onUpdate(idx, e.target.value)}
              placeholder={`${label}...`} 
              className="flex-1 bg-slate-950 border border-white/5 rounded-xl py-2.5 px-4 text-sm outline-none focus:border-blue-500/30" 

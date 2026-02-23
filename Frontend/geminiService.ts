@@ -21,6 +21,7 @@ export const geminiService = {
       return questions;
     } catch (error) {
       console.error("Failed to generate questions:", error);
+      alert(`Question Generation Failed: ${String(error)}`);
       return [];
     }
   },

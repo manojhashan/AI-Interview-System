@@ -3,10 +3,10 @@ import json
 import time
 import random
 import string
-import google.generativeai as genai
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 
@@ -22,8 +22,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db, engine
 from models import User, Resume, Education, Experience, Project, Skill, Certificate, Base, InterviewResult
-from services.ai_engine import simulate_question_generation, get_dummy_answer_analysis, analyze_answer_multimodal
-from services.question_generator import generate_overall_summary_t5
+from services.ai_engine import simulate_question_generation, get_dummy_answer_analysis, analyze_answer_multimodal, generate_overall_summary_gemini
 
 # Create Tables
 Base.metadata.create_all(bind=engine)
@@ -72,7 +71,8 @@ class ExperienceEntry(BaseModel):
 
 class ResumeData(BaseModel):
     id: Optional[str] = None
-    resumeTitle: str
+    # 13. Character Limit Enforcement
+    resumeTitle: str = Field(..., max_length=100)
     skills: List[str]
     certificates: List[str]
     education: List[str]
@@ -139,10 +139,11 @@ class AnalyzeAnswerResponse(BaseModel):
     feedback: AnalysisFeedback
 
 class UserCreate(BaseModel):
-    first_name: str
-    last_name: str
+    # 13. Character Limit Enforcement
+    first_name: str = Field(..., min_length=2, max_length=50)
+    last_name: str = Field(..., min_length=2, max_length=50)
     email: str
-    password: str
+    password: str = Field(..., min_length=6)
 
 class Token(BaseModel):
     access_token: str
@@ -429,9 +430,9 @@ def delete_resume(resume_id: str, db: Session = Depends(get_db)):
 def save_result(result_data: InterviewResultData, db: Session = Depends(get_db)):
     result_id = result_data.id if result_data.id else None
     
-    # Generate Overall Advice
-    overall_advice = generate_overall_summary_t5(
-        [d.dict() for d in result_data.details], 
+    # Generate Overall Advice using Gemini
+    overall_advice = generate_overall_summary_gemini(
+        [d.model_dump() for d in result_data.details], 
         result_data.jobRole
     )
     

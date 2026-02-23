@@ -78,6 +78,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
         video: { width: 1280, height: 720 }, 
         audio: true 
       });
+
+      // Explicitly check for audio track
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0 || !audioTracks[0].enabled) {
+          throw new Error("Microphone not detected or disabled.");
+      }
+
       mediaStreamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -88,13 +95,16 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({ user, onComplete, o
         selectedResume as any,
         selectedResume.resumeTitle
       );
+      // alert(`DEBUG: Received ${generated ? generated.length : 'null'} questions from API`);
       setQuestions(generated);
       setIsProcessing(false);
       // 2. Generate Questions
       // The AI reads the resume and makes up questions.
     } catch (err) {
-      console.error("Camera error:", err);
-      alert("Please grant camera and microphone permissions to proceed.");
+      console.error("Device Access Error:", err);
+      // Fallback for specific mic error if possible to distinguish
+      alert("Error: Camera and Microphone are strictly required. Please check permissions and try again.");
+      setStep('selection'); // Go back
     }
   };
 

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from database import get_db, engine
 from models import User, Resume, Education, Experience, Project, Skill, Certificate, Base, InterviewResult
 from services.ai_engine import simulate_question_generation, get_dummy_answer_analysis, analyze_answer_multimodal, generate_overall_summary_gemini
+from services.xai_explainer import generate_xai_feedback
 
 # Create Tables
 Base.metadata.create_all(bind=engine)
@@ -110,7 +111,7 @@ class InterviewResultData(BaseModel):
     scores: ConfidenceScore
     feedback: Optional[str] = None
     details: List[QuestionDetail] = []
-    details: List[QuestionDetail] = []
+    xai: Optional[Dict[str, Any]] = None   # XAI explainable feedback block
     model_config = ConfigDict(extra='ignore')
 
 class GenerateQuestionsRequest(BaseModel):
@@ -187,6 +188,21 @@ def get_resume_data(orm_resume):
 
 def get_result_data(orm_result):
     candidate_id = orm_result.resume.user_id if orm_result.resume else "Unknown"
+
+    vocal_score    = float(orm_result.vocal_score    or 70)
+    facial_score   = float(orm_result.facial_score   or 70)
+    semantic_score = float(orm_result.semantic_score or 70)
+    overall_score  = float(orm_result.overall_score  or 70)
+
+    # Compute XAI on-the-fly from stored scores (works for ALL interviews, old & new)
+    xai_data = generate_xai_feedback(
+        vocal_score    = vocal_score,
+        facial_score   = facial_score,
+        semantic_score = semantic_score,
+        overall_score  = overall_score,
+        dominant_emotion = "Neutral"  # Session-level uses Neutral as default
+    )
+
     return InterviewResultData(
         id=orm_result.id,
         resumeId=orm_result.resume_id,
@@ -196,13 +212,14 @@ def get_result_data(orm_result):
         time=orm_result.time,
         jobRole=orm_result.job_role,
         scores={
-            "facial": orm_result.facial_score,
-            "vocal": orm_result.vocal_score,
-            "semantic": orm_result.semantic_score,
-            "overall": orm_result.overall_score
+            "facial":   facial_score,
+            "vocal":    vocal_score,
+            "semantic": semantic_score,
+            "overall":  overall_score
         },
         feedback=orm_result.semantic_feedback,
-        details=json.loads(orm_result.details_json)
+        details=json.loads(orm_result.details_json),
+        xai=xai_data
     )
 
 # --- Routes ---

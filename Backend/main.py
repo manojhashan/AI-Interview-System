@@ -28,6 +28,21 @@ from services.xai_explainer import generate_xai_feedback
 # Create Tables
 Base.metadata.create_all(bind=engine)
 
+# --- Startup Migration ---
+# Add user_deleted column to existing interview_results table if not already present
+# (create_all does not auto-add new columns to existing tables)
+from sqlalchemy import text as sa_text
+try:
+    with engine.connect() as conn:
+        conn.execute(sa_text(
+            "ALTER TABLE interview_results ADD COLUMN IF NOT EXISTS user_deleted BOOLEAN DEFAULT FALSE"
+        ))
+        conn.commit()
+    print("✅ Migration: user_deleted column ready.")
+except Exception as _e:
+    print(f"⚠️  Migration note: {_e}")
+
+
 # JWT Config
 SECRET_KEY = "your_super_secret_key_here" # In prod, use .env
 ALGORITHM = "HS256"
@@ -112,6 +127,7 @@ class InterviewResultData(BaseModel):
     feedback: Optional[str] = None
     details: List[QuestionDetail] = []
     xai: Optional[Dict[str, Any]] = None   # XAI explainable feedback block
+    userDeleted: Optional[bool] = False     # 33. Soft-delete flag for admin view
     model_config = ConfigDict(extra='ignore')
 
 class GenerateQuestionsRequest(BaseModel):
@@ -219,7 +235,8 @@ def get_result_data(orm_result):
         },
         feedback=orm_result.semantic_feedback,
         details=json.loads(orm_result.details_json),
-        xai=xai_data
+        xai=xai_data,
+        userDeleted=bool(orm_result.user_deleted)
     )
 
 # --- Routes ---
@@ -477,7 +494,11 @@ def save_result(result_data: InterviewResultData, db: Session = Depends(get_db))
 @app.get("/api/results/{user_id}", response_model=List[InterviewResultData])
 # 30. Retrieve Candidate Results
 def get_user_results(user_id: str, db: Session = Depends(get_db)):
-    results = db.query(InterviewResult).join(Resume).filter(Resume.user_id == user_id).all()
+    # Only return results that the user has NOT soft-deleted
+    results = db.query(InterviewResult).join(Resume).filter(
+        Resume.user_id == user_id,
+        InterviewResult.user_deleted == False
+    ).all()
     return [get_result_data(r) for r in results]
 
 @app.get("/api/results/detail/{result_id}", response_model=InterviewResultData)
@@ -492,6 +513,20 @@ def get_result_detail(result_id: str, db: Session = Depends(get_db)):
 def get_all_results(db: Session = Depends(get_db)):
     results = db.query(InterviewResult).all()
     return [get_result_data(r) for r in results][::-1]
+
+@app.delete("/api/results/{result_id}")
+def delete_result(result_id: str, user_id: str, db: Session = Depends(get_db)):
+    # 33. User Can Soft-Delete Own Interview Result
+    # Data is NOT permanently removed — admin can still view it with a "Deleted by User" badge
+    result = db.query(InterviewResult).filter(InterviewResult.id == result_id).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    # Ownership check: only the result's owner can soft-delete
+    if result.resume.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this result")
+    result.user_deleted = True
+    db.commit()
+    return {"status": "success", "message": "Result hidden from your view"}
 
 @app.put("/api/users/{user_id}")
 def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get_db)):

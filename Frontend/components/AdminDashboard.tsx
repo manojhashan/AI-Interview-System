@@ -114,7 +114,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onViewResult, onL
                              <div className="hidden md:block w-px h-10 bg-slate-800" />
                               <div className="text-center">
                                 <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-1">Status</p>
-                                <p className="text-sm font-bold text-slate-300">Completed</p>
+                                {item.userDeleted ? (
+                                  <span className="px-2 py-0.5 text-xs font-bold bg-red-500/20 text-red-400 rounded-full border border-red-500/30">
+                                    Deleted by User
+                                  </span>
+                                ) : (
+                                  <p className="text-sm font-bold text-slate-300">Completed</p>
+                                )}
                              </div>
                           </div>
                           <div className="bg-slate-800 p-2 rounded-xl group-hover:bg-purple-600 transition-colors">

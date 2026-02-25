@@ -258,6 +258,18 @@ export const geminiService = {
       }
   },
 
+  async deleteInterviewResult(resultId: string, userId: string): Promise<boolean> {
+      try {
+          const response = await fetch(`${API_BASE_URL}/results/${resultId}?user_id=${userId}`, {
+              method: "DELETE"
+          });
+          return response.ok;
+      } catch (error) {
+          console.error("Delete Result Error:", error);
+          return false;
+      }
+  },
+
   async updateUser(userId: string, data: { first_name?: string, last_name?: string, email?: string, password?: string }) {
       try {
           const response = await fetch(`${API_BASE_URL}/users/${userId}`, {

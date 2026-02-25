@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 import uuid
@@ -104,6 +104,7 @@ class InterviewResult(Base):
     # This stores the full list of questions and answers as text (JSON format).
 
     details_json = Column(Text) # Stores List[QuestionDetail]
+    user_deleted = Column(Boolean, default=False)  # 33. Soft-delete: hides from user view, admin can still see
     
     resume = relationship("Resume", back_populates="interview_results")
 

@@ -75,4 +75,5 @@ export interface InterviewResult {
   feedback?: string;
   details: QuestionDetail[];
   xai?: XaiExplanation;
+  userDeleted?: boolean; // 33. Soft-delete: true when user removed it from their view
 }

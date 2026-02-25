@@ -26,11 +26,13 @@ const HistoryView: React.FC<HistoryViewProps> = ({ userId, onViewResult }) => {
 
   const deleteRecord = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm('Delete this interview record permanently?')) {
-      // Currently no API for delete result, assuming frontend only hiding or todo
-      // We didn't add DELETE /api/results/{id} yet.
-      // For now, just alert or skip until implemented.
-      alert("Delete not supported on backend yet.");
+    if (window.confirm('Are you sure you want to delete this interview record? This cannot be undone.')) {
+      const success = await geminiService.deleteInterviewResult(id, userId);
+      if (success) {
+        setHistory(prev => prev.filter(item => item.id !== id));
+      } else {
+        alert('Delete failed. Please try again.');
+      }
     }
   };
 
@@ -101,7 +103,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ userId, onViewResult }) => {
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={(e) => deleteRecord(e, item.id)}
-                    className="p-2.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                    className="p-2.5 text-red-400 bg-red-500/10 hover:text-red-300 hover:bg-red-500/25 rounded-xl transition-all border border-red-500/20"
                     title="Delete Record"
                   >
                     <Trash2 size={20} />

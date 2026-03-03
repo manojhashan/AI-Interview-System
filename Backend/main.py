@@ -24,6 +24,7 @@ from database import get_db, engine
 from models import User, Resume, Education, Experience, Project, Skill, Certificate, Base, InterviewResult
 from services.ai_engine import simulate_question_generation, get_dummy_answer_analysis, analyze_answer_multimodal, generate_overall_summary_gemini
 from services.xai_explainer import generate_xai_feedback
+from services.email_service import send_otp_email
 
 # Create Tables
 Base.metadata.create_all(bind=engine)
@@ -338,20 +339,16 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
         # For now, let's return 404 to help debugging
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Generate 4-digit OTP
-    # 10. Password Recovery OTP
+    # 6. Generate and Send Verification OTP — send to user's real email
     otp = "".join(random.choices(string.digits, k=4))
     otp_storage[request.email] = otp
-    
-    # 3. Send OTP (Simulated)
-    # In a real system, we would email this code.
-    # Here, we just print it to the black screen (Console) so you can see it.
-    
-    # In a real app, send email here.
-    # For now, PRINT TO CONSOLE
-    print(f"DEBUG: OTP for {request.email} is {otp}")
-    
-    return {"message": "OTP sent to email (check backend console)"}
+
+    email_sent = send_otp_email(request.email, otp)
+    if not email_sent:
+        # Fallback: print to console if email fails
+        print(f"DEBUG (email failed): OTP for {request.email} is {otp}")
+
+    return {"message": "OTP sent to your email address"}
 
 @app.post("/auth/verify-otp")
 # 7. Verify Email (using OTP verification as proxy)

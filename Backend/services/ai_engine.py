@@ -4,10 +4,7 @@ import json
 
 from services.semantic_analyzer import analyze_semantic
 from services.emotion_analyzer import analyze_frames as analyze_emotion_frames
-<<<<<<< HEAD
 from services.vocal_analyzer import analyze_audio as analyze_vocal_audio
-=======
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
 from services.xai_explainer import generate_xai_feedback
 
 
@@ -28,32 +25,18 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         
         prompt = f"""
         You are an expert technical interviewer. 
-<<<<<<< HEAD
         Generate exactly {count} interview questions for a candidate applying for the role of '{job_role}'.
-=======
-        Generate {count} interview questions for a candidate applying for the role of '{job_role}'.
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         
         Here is the candidate's Resume/CV content:
         "{cv_text[:2000]}"... (truncated)
 
         INSTRUCTIONS:
-<<<<<<< HEAD
         - Generate exactly {count} questions total.
         - Mix them: some about specific projects in the CV, some verifying listed skills, some technical scenario questions.
         
         OUTPUT FORMAT (VERY IMPORTANT):
         Return ONLY a valid JSON array, with no markdown, no code fences, no explanation.
         Each object must have exactly these keys:
-=======
-        1. Ask 2 questions about specific projects listed in the CV.
-        2. Ask 2 questions verifying specific skills listed.
-        3. Ask 2 challenging technical scenario questions related to the role.
-        
-        OUTPUT FORMAT:
-        Return ONLY a raw JSON array of objects.
-        Each object must have:
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         - "id": "gen1", "gen2", etc.
         - "text": "The question string"
         - "category": "Technical" or "Project" or "Situational"
@@ -68,7 +51,6 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
             )
         )
         
-<<<<<<< HEAD
         # Strip markdown code fences if present, then parse JSON
         raw = response.text.strip()
         if raw.startswith("```"):
@@ -76,10 +58,6 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
             if raw.startswith("json"):
                 raw = raw[4:]
         questions = json.loads(raw.strip())
-=======
-        # Response is guaranteed to be JSON string in response.text
-        questions = json.loads(response.text)
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         
         # Ensure ID and keys are correct
         final_questions = []
@@ -165,10 +143,8 @@ def simulate_question_generation(cv_text: str, job_role: str):
         if gemini_questions:
             questions = gemini_questions
         else:
-            # Fallback to local hardcoded questions is disabled for debugging.
             questions = []
             
-        # Fallback to hardcoded if local generation also fails or returns empty
         if not questions:
             print("DEBUG: Gemini Generation failed and local fallback is disabled.")
             questions = []
@@ -181,7 +157,7 @@ def simulate_question_generation(cv_text: str, job_role: str):
             {"id": "intro4", "text": "Where do you see yourself in 5 years?", "category": "Common"}
         ]
         
-        # 3. Challenging/Situational (3 Questions)
+        # 2. Challenging/Situational (3 Questions)
         situational_questions = [
             {"id": "sit1", "text": "Describe a high-pressure situation and how you managed it.", "category": "Situational"},
             {"id": "sit2", "text": "How do you handle disagreements with team members?", "category": "Situational"},
@@ -203,28 +179,9 @@ def simulate_question_generation(cv_text: str, job_role: str):
     except Exception as e:
         print(f"Error generating questions: {e}")
 
-    # Fallback to old hardcoded list if anything fails
-    # questions = [
-    #     {"id": "q1", "text": "Can you start by introducing yourself and your background?", "category": "Common"},
-    #     {"id": "q2", "text": f"What motivates you to apply for the {job_role} position?", "category": "Common"},
-    #     {"id": "q3", "text": "What do you consider your greatest professional strength?", "category": "Common"},
-    #     {"id": "q4", "text": "Where do you see your career heading in the next 5 years?", "category": "Common"},
-    #     # CV Based
-    #     {"id": "q5", "text": "I noticed skills in your CV. How have you applied these in a real project?", "category": "Technical"},
-    #     {"id": "q6", "text": "Regarding the project mentioned in your profile, what was the biggest technical hurdle?", "category": "Technical"},
-    #     {"id": "q7", "text": "How does your previous experience prepare you for this specific role?", "category": "Technical"},
-    #     {"id": "q8", "text": "Can you elaborate on the certification you listed?", "category": "Technical"},
-    #     {"id": "q9", "text": "Tell me about a time you had to learn a new tool quickly for a task.", "category": "Technical"},
-    #     {"id": "q10", "text": "How do you ensure quality in your technical deliverables?", "category": "Technical"},
-    #     # Challenges
-    #     {"id": "q11", "text": "Describe a high-pressure situation and how you managed it.", "category": "Situational"},
-    #     {"id": "q12", "text": "How do you handle disagreements with team members on technical decisions?", "category": "Situational"},
-    #     {"id": "q13", "text": "If a project is falling behind schedule, what steps do you take?", "category": "Situational"},
-    # ]
-    return [] # Return empty instead of fallback list to force error visibility in frontend if total failure
+    return []
 
 def get_dummy_analysis(modality: str):
-    # This might still be used for individual checking if needed, but main logic is below
     responses = {
         "face": {
             "score": 85.0,
@@ -235,7 +192,7 @@ def get_dummy_analysis(modality: str):
             "explanation": "Steady pitch and clear articulation, though minor hesitation was noted."
         },
         "semantic": {
-            "score": 0.0, # Placeholder
+            "score": 0.0,
             "explanation": "Semantic analysis is now real-time."
         }
     }
@@ -247,7 +204,7 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     Integrates semantic, facial, and vocal analysis — all run in PARALLEL
     using ThreadPoolExecutor so the interview answer feedback is fast.
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor
 
     # 1. Define each analysis as a callable
     def run_semantic():
@@ -268,7 +225,6 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
         return analyze_vocal_audio(audio_blob)
 
     # 2. Run all 4 in parallel — total time ≈ max(semantic, gemini, emotion, vocal)
-    # instead of semantic + gemini + emotion + vocal (sequential)
     with ThreadPoolExecutor(max_workers=4) as executor:
         future_semantic = executor.submit(run_semantic)
         future_gemini   = executor.submit(run_gemini_feedback)
@@ -281,7 +237,7 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
         vocal_result     = future_vocal.result()
 
     # 3. Process results
-    semantic_score   = semantic_result["score"]
+    semantic_score    = semantic_result["score"]
     semantic_feedback = f"{semantic_result['feedback']} | {gemini_feedback}"
 
     # 29. Store Facial Analysis Results
@@ -302,18 +258,18 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     # 38. Evaluate and Compare Confidence Models (XAI charts show single vs multimodal advantage)
     dominant_emotion = facial_result.get("dominant_emotion", "Neutral")
     xai_explanation  = generate_xai_feedback(
-        vocal_score    = float(vocal_score),
-        facial_score   = float(facial_score),
-        semantic_score = float(semantic_score),
-        overall_score  = float(overall_score),
+        vocal_score      = float(vocal_score),
+        facial_score     = float(facial_score),
+        semantic_score   = float(semantic_score),
+        overall_score    = float(overall_score),
         dominant_emotion = dominant_emotion
     )
 
     return {
         "scores": {
-            "overall": overall_score,
-            "facial":  facial_score,
-            "vocal":   vocal_score,
+            "overall":  overall_score,
+            "facial":   facial_score,
+            "vocal":    vocal_score,
             "semantic": semantic_score
         },
         "feedback": {
@@ -322,11 +278,9 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
             "semantic": semantic_feedback,
             "summary":  "AI Analysis Complete."
         },
-        "xai": xai_explanation   # Explainable AI block
+        "xai": xai_explanation
     }
 
-# Alias for backward compatibility if main.py calls get_dummy_answer_analysis directly
-# Ideally main.py should update to call analyze_answer_multimodal
+# Alias for backward compatibility
 def get_dummy_answer_analysis():
     return analyze_answer_multimodal("Test Question", "This is a test answer.")
-

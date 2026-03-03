@@ -4,7 +4,10 @@ import json
 
 from services.semantic_analyzer import analyze_semantic
 from services.emotion_analyzer import analyze_frames as analyze_emotion_frames
+<<<<<<< HEAD
 from services.vocal_analyzer import analyze_audio as analyze_vocal_audio
+=======
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
 from services.xai_explainer import generate_xai_feedback
 
 
@@ -25,18 +28,32 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         
         prompt = f"""
         You are an expert technical interviewer. 
+<<<<<<< HEAD
         Generate exactly {count} interview questions for a candidate applying for the role of '{job_role}'.
+=======
+        Generate {count} interview questions for a candidate applying for the role of '{job_role}'.
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         
         Here is the candidate's Resume/CV content:
         "{cv_text[:2000]}"... (truncated)
 
         INSTRUCTIONS:
+<<<<<<< HEAD
         - Generate exactly {count} questions total.
         - Mix them: some about specific projects in the CV, some verifying listed skills, some technical scenario questions.
         
         OUTPUT FORMAT (VERY IMPORTANT):
         Return ONLY a valid JSON array, with no markdown, no code fences, no explanation.
         Each object must have exactly these keys:
+=======
+        1. Ask 2 questions about specific projects listed in the CV.
+        2. Ask 2 questions verifying specific skills listed.
+        3. Ask 2 challenging technical scenario questions related to the role.
+        
+        OUTPUT FORMAT:
+        Return ONLY a raw JSON array of objects.
+        Each object must have:
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         - "id": "gen1", "gen2", etc.
         - "text": "The question string"
         - "category": "Technical" or "Project" or "Situational"
@@ -51,6 +68,7 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
             )
         )
         
+<<<<<<< HEAD
         # Strip markdown code fences if present, then parse JSON
         raw = response.text.strip()
         if raw.startswith("```"):
@@ -58,6 +76,10 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
             if raw.startswith("json"):
                 raw = raw[4:]
         questions = json.loads(raw.strip())
+=======
+        # Response is guaranteed to be JSON string in response.text
+        questions = json.loads(response.text)
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
         
         # Ensure ID and keys are correct
         final_questions = []
@@ -225,11 +247,32 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     Integrates semantic, facial, and vocal analysis — all run in PARALLEL
     using ThreadPoolExecutor so the interview answer feedback is fast.
     """
+<<<<<<< HEAD
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     # 1. Define each analysis as a callable
     def run_semantic():
         return analyze_semantic(question, answer)
+=======
+    
+    # 1. Real Semantic Analysis
+    # 23. Evaluate Candidate Answers
+    semantic_result = analyze_semantic(question, answer)
+    semantic_score = semantic_result["score"]
+    
+    # Generate Gemini Feedback
+    # 25. Generate AI Feedback using Gemini
+    gemini_feedback = generate_feedback_gemini(question, answer)
+    
+    # Combine semantic score with Gemini's qualitative feedback
+    semantic_feedback = f"{semantic_result['feedback']} | {gemini_feedback}"
+
+    # 2. Real Facial Analysis (facial_emotion_model.h5 + MediaPipe Head Pose)
+    # 28. Generate Facial Feedback
+    facial_result  = analyze_emotion_frames(frames or [])
+    facial_score   = facial_result["facial_score"]
+    facial_feedback = facial_result["facial_feedback"]
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
 
     def run_gemini_feedback():
         return generate_feedback_gemini(question, answer)
@@ -267,9 +310,16 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     # 5. Calculate Overall Score (Weighted Average)
     # 26. Store Vocal Analysis Results (Returned in structure)
     # 29. Store Facial Analysis Results (Returned in structure)
+<<<<<<< HEAD
     overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
 
     # 6. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
+=======
+    # We combine all scores. Vocal and Facial are 40% each, Semantic is 20%.
+    overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
+
+    # 5. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
+>>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
     dominant_emotion = facial_result.get("dominant_emotion", "Neutral")
     xai_explanation  = generate_xai_feedback(
         vocal_score    = float(vocal_score),

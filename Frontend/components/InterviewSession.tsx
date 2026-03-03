@@ -144,31 +144,14 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   const startSetup = async () => {
     if (!selectedResume) return;
     setStep("setup");
+    // 19. Interview Environment Initialization
     // 1. Get Camera & Mic separately so audio track is never muted by <video muted>
     try {
       // 18. Device Access Validation
-<<<<<<< HEAD
       // Stop any previously active tracks first to avoid "device already in use" errors
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((t) => t.stop());
         mediaStreamRef.current = null;
-=======
-      // 24. Capture Audio Input
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 1280, height: 720 }, 
-        audio: true 
-      });
-
-      // Explicitly check for audio track
-      const audioTracks = stream.getAudioTracks();
-      if (audioTracks.length === 0 || !audioTracks[0].enabled) {
-          throw new Error("Microphone not detected or disabled.");
-      }
-
-      mediaStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
       }
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach((t) => t.stop());
@@ -218,14 +201,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
       audioStreamRef.current = audioStream;
 
       setIsProcessing(true);
+      // 22. Generate Interview Questions
       const generated = await geminiService.generateQuestions(
         selectedResume as any,
         selectedResume.resumeTitle,
       );
-      // alert(`DEBUG: Received ${generated ? generated.length : 'null'} questions from API`);
       setQuestions(generated);
       setIsProcessing(false);
-<<<<<<< HEAD
     } catch (err: any) {
       console.error("Device Access Error:", err);
       // Stop any streams we managed to open before the error
@@ -240,23 +222,14 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
       alert(err?.message || "Error: Camera and Microphone are required. Please check browser permissions and try again.");
       setIsProcessing(false);
       setStep("selection"); // Go back
-=======
-      // 2. Generate Questions
-      // The AI reads the resume and makes up questions.
-    } catch (err) {
-      console.error("Device Access Error:", err);
-      // Fallback for specific mic error if possible to distinguish
-      alert("Error: Camera and Microphone are strictly required. Please check permissions and try again.");
-      setStep('selection'); // Go back
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
     }
   };
 
   const startInterview = () => {
     // 20. Readiness Confirmation Handling
-    // 20. Readiness Confirmation Handling
     setStep("active");
   };
+
 
   const isRecordingRef = useRef(false);
 
@@ -514,7 +487,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* 17. Candidate Eligibility Verification (Selected Profile) */}
+          {/* 16. Candidate Eligibility Verification — user must select a resume profile before starting */}
           <div
             onClick={onAddResume}
             className="bg-slate-900/50 border-2 border-dashed border-slate-800 p-8 rounded-3xl flex flex-col items-center justify-center text-center hover:border-blue-500/50 hover:bg-slate-900 transition-all cursor-pointer group"

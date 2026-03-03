@@ -247,40 +247,24 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     Integrates semantic, facial, and vocal analysis — all run in PARALLEL
     using ThreadPoolExecutor so the interview answer feedback is fast.
     """
-<<<<<<< HEAD
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     # 1. Define each analysis as a callable
     def run_semantic():
+        # 23. Evaluate Candidate Answers
         return analyze_semantic(question, answer)
-=======
-    
-    # 1. Real Semantic Analysis
-    # 23. Evaluate Candidate Answers
-    semantic_result = analyze_semantic(question, answer)
-    semantic_score = semantic_result["score"]
-    
-    # Generate Gemini Feedback
-    # 25. Generate AI Feedback using Gemini
-    gemini_feedback = generate_feedback_gemini(question, answer)
-    
-    # Combine semantic score with Gemini's qualitative feedback
-    semantic_feedback = f"{semantic_result['feedback']} | {gemini_feedback}"
-
-    # 2. Real Facial Analysis (facial_emotion_model.h5 + MediaPipe Head Pose)
-    # 28. Generate Facial Feedback
-    facial_result  = analyze_emotion_frames(frames or [])
-    facial_score   = facial_result["facial_score"]
-    facial_feedback = facial_result["facial_feedback"]
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
 
     def run_gemini_feedback():
+        # 25. Generate Vocal Feedback (Gemini qualitative semantic feedback)
         return generate_feedback_gemini(question, answer)
 
     def run_emotion():
+        # 28. Analyze Facial Features — emotion model + head pose
         return analyze_emotion_frames(frames or [])
 
     def run_vocal():
+        # 24. Analyze Vocal Features — pitch, energy, rate from audio
+        # 25. Generate Vocal Feedback
         return analyze_vocal_audio(audio_blob)
 
     # 2. Run all 4 in parallel — total time ≈ max(semantic, gemini, emotion, vocal)
@@ -300,26 +284,22 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
     semantic_score   = semantic_result["score"]
     semantic_feedback = f"{semantic_result['feedback']} | {gemini_feedback}"
 
+    # 29. Store Facial Analysis Results
     facial_score    = facial_result["facial_score"]
     facial_feedback = facial_result["facial_feedback"]
 
     # 4. Vocal Analysis
+    # 26. Store Vocal Analysis Results
     vocal_score    = vocal_result["vocal_score"]
     vocal_feedback = vocal_result["vocal_feedback"]
 
     # 5. Calculate Overall Score (Weighted Average)
-    # 26. Store Vocal Analysis Results (Returned in structure)
-    # 29. Store Facial Analysis Results (Returned in structure)
-<<<<<<< HEAD
+    # 37. Calculate Modality Contribution
+    # Vocal 40% + Facial 40% + Semantic 20% — multimodal weighted fusion
     overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
 
     # 6. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
-=======
-    # We combine all scores. Vocal and Facial are 40% each, Semantic is 20%.
-    overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
-
-    # 5. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
->>>>>>> c729685d4ab1747f5374514252922d61d78b50f4
+    # 38. Evaluate and Compare Confidence Models (XAI charts show single vs multimodal advantage)
     dominant_emotion = facial_result.get("dominant_emotion", "Neutral")
     xai_explanation  = generate_xai_feedback(
         vocal_score    = float(vocal_score),

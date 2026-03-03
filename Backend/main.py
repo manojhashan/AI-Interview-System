@@ -400,6 +400,7 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 @app.post("/api/resumes", response_model=ResumeData)
 # 14. Resume Persistence
 # 15. Resume Update Processing (Inside Logic)
+# 16. Candidate Eligibility Verification (user_id validated before saving resume)
 def save_resume(resume_data: ResumeData, user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
@@ -492,7 +493,8 @@ def save_result(result_data: InterviewResultData, db: Session = Depends(get_db))
     return get_result_data(db_result)
 
 @app.get("/api/results/{user_id}", response_model=List[InterviewResultData])
-# 30. Retrieve Candidate Results
+# 31. Retrieve Candidate Results
+# Filters out soft-deleted results so the user only sees their active sessions
 def get_user_results(user_id: str, db: Session = Depends(get_db)):
     # Only return results that the user has NOT soft-deleted
     results = db.query(InterviewResult).join(Resume).filter(
@@ -502,6 +504,8 @@ def get_user_results(user_id: str, db: Session = Depends(get_db)):
     return [get_result_data(r) for r in results]
 
 @app.get("/api/results/detail/{result_id}", response_model=InterviewResultData)
+# 35. Retrieve Detailed Report
+# Returns full question-by-question breakdown including per-modality scores and feedback
 def get_result_detail(result_id: str, db: Session = Depends(get_db)):
     result = db.query(InterviewResult).filter(InterviewResult.id == result_id).first()
     if not result:
@@ -509,7 +513,8 @@ def get_result_detail(result_id: str, db: Session = Depends(get_db)):
     return get_result_data(result)
 
 @app.get("/api/admin/results", response_model=List[InterviewResultData])
-# 31. Retrieve All Candidates List
+# 32. Retrieve All Candidates List (Admin)
+# Admin sees ALL results including soft-deleted ones (shown with a badge in the frontend)
 def get_all_results(db: Session = Depends(get_db)):
     results = db.query(InterviewResult).all()
     return [get_result_data(r) for r in results][::-1]

@@ -42,6 +42,7 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack, isAdmin = fal
 
   return (
     // 34. Display Results Securely
+    // 36. Display Results Securely — user sees only their own results; admins see all via isAdmin prop
     <div className="space-y-12 animate-in fade-in duration-500">
       <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
         <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
@@ -260,6 +261,8 @@ const ScoreCard = ({ title, score, color, desc }: any) => {
 
 /* ─────────────────────────────────────────────
    Multimodal Charts Component
+   38. Evaluate and Compare Confidence Models
+   Shows single-modality vs multimodal performance visually
 ───────────────────────────────────────────── */
 const MultimodalCharts = ({ result }: { result: InterviewResult }) => {
   // Radar data: session-level scores

@@ -1,99 +1,104 @@
 # Zynergy AI Interview System
 
-An advanced AI-powered interview system designed to help candidates prepare for interviews by generating tailored questions and providing real-time analysis of their answers using audio and video feedback.
+An advanced AI-powered interview system that evaluates candidates using multimodal analysis — facial expressions, vocal tone, and semantic understanding — powered by Google Gemini.
 
 ## 🚀 Features
 
-- **Smart Question Generation**: Generates interview questions based on your specialized Resume and Job Role.
-- **AI Answer Analysis**: Analyzes your video and audio response to provide comprehensive feedback.
-- **Real-time Monitoring**: Uses camera and microphone to simulate a real interview environment.
-- **Modern UI**: Built with a responsive and sleek interface for the best user experience.
+- **Smart Question Generation** — AI-generated questions tailored to your resume and job role
+- **Multimodal Analysis** — Real-time facial emotion, vocal confidence & semantic answer scoring
+- **Explainable AI (XAI)** — SHAP-based transparent feedback per modality
+- **Admin Dashboard** — View all candidate results with detailed reports
+- **Email OTP** — Secure password recovery via email verification
+- **Modern UI** — Responsive dark-mode interface built with React + TypeScript
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 
-- **React** (via Vite)
-- **TypeScript**
-- **Google GenAI SDK**
+- **React** + **TypeScript** (via Vite)
+- **Google Gemini API** (question generation & answer feedback)
 
 ### Backend
 
-- **Python**
-- **Flask**
-- **Google GenAI**
+- **Python** + **FastAPI**
+- **SQLAlchemy** + **PostgreSQL**
+- **TensorFlow / Keras** (facial emotion model)
+- **OpenCV** (head pose estimation)
+- **Google Gemini API** (semantic feedback & summaries)
 
-## 🏁 Getting Started
+---
 
-Follow these instructions to get the project up and running on your local machine.
+## 📥 Download & Setup
+
+> ⚠️ **This is a research project.** The source code is available for **reference and learning only**.  
+> Contributions and modifications to this repository are not accepted.
+
+### Download
+
+**[⬇️ Download ZIP](https://github.com/manojhashan/AI-Interview-System/archive/refs/heads/main.zip)**
+
+Extract the ZIP and follow the steps below.
+
+---
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (Latest LTS recommended)
-- [Python](https://www.python.org/) (3.8 or higher)
-- Google Gemini API Key
+- [Node.js](https://nodejs.org/) (Latest LTS)
+- [Python](https://www.python.org/) 3.8 or higher
+- A **Google Gemini API Key** — [Get one here](https://aistudio.google.com/app/apikey)
+- A **Gmail App Password** — for OTP email delivery
 
-### Installation
+---
 
-1.  **Clone the repository**
-
-    ```bash
-    git clone https://github.com/manojhashan/AI-Interview-System.git
-    cd AI-Interview-System
-    ```
-
-2.  **Backend Setup**
-    Navigate to the `Backend` directory and install dependencies.
-
-    ```bash
-    cd Backend
-    python -m venv .venv
-    .venv\Scripts\activate  # On Windows
-    pip install -r requirements.txt
-    ```
-
-    _Note: Ensure you have a `.env` file in the Backend directory with your `GEMINI_API_KEY`._
-
-3.  **Frontend Setup**
-    Navigate to the `Frontend` directory and install dependencies.
-    ```bash
-    cd ../Frontend
-    npm install
-    ```
-
-### Running the Application
-
-You can easily start both the backend and frontend using the provided batch script:
-
-1.  Go to the root directory.
-2.  Double-click **`start_project.bat`**.
-
-Or run them manually:
-
-**Backend:**
+### Backend Setup
 
 ```bash
 cd Backend
-python app.py
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
 ```
 
-**Frontend:**
+Create a `.env` file inside the `Backend` folder:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+DATABASE_URL=your_postgresql_connection_string
+EMAIL_ADDRESS=your_gmail@gmail.com
+EMAIL_APP_PASSWORD=your_gmail_app_password
+```
+
+> **Note:** Never share your `.env` file. Each user must create their own with their own API keys.
+
+Start the backend:
+
+```bash
+python main.py
+```
+
+Backend runs on: `http://localhost:5000`
+
+---
+
+### Frontend Setup
 
 ```bash
 cd Frontend
+npm install
 npm run dev
 ```
 
-- Frontend will run on: `http://localhost:3000` (or the port shown in terminal)
-- Backend runs on: `http://localhost:5000`
+Frontend runs on: `http://localhost:5173`
+
+---
 
 ## 👤 Author
 
 **Manoj Hashan**
 
 - GitHub: [@manojhashan](https://github.com/manojhashan)
-- Project Repository: [AI-Interview-System](https://github.com/manojhashan/AI-Interview-System)
+- Project: [AI-Interview-System](https://github.com/manojhashan/AI-Interview-System)
 
 ---
 
-_Created for the Zynergy AI Interview System Project._
+_Zynergy AI Interview System — Research Project, 2025_

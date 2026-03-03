@@ -13,22 +13,21 @@ import cv2
 import numpy as np
 import base64
 
-# ─── Lazy-load resources (only once on first request) ───────────────────────
+# ─── Preload resources at module import (not lazily on first request) ────────
 _emotion_model  = None
 _face_cascade   = None
-_eye_cascade    = None  # used for head pose landmark estimation
+_eye_cascade    = None
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "trained_models", "facial_emotion_model.h5")
 
 EMOTIONS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
 
 # Scientific valence weights per emotion class index
-# Angry=-0.6, Disgust=-0.8, Fear=-0.9, Happy=1.0, Neutral=0.8, Sad=-0.4, Surprise=0.2
 VALENCE_WEIGHTS = {0: -0.6, 1: -0.8, 2: -0.9, 3: 1.0, 4: 0.8, 5: -0.4, 6: 0.2}
 
 
 def _load_resources():
-    """Load model + cascades once. Thread safe enough for FastAPI dev server."""
+    """Load model + cascades once."""
     global _emotion_model, _face_cascade, _eye_cascade
 
     if _emotion_model is None:
@@ -43,12 +42,16 @@ def _load_resources():
     if _face_cascade is None:
         cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         _face_cascade = cv2.CascadeClassifier(cascade_path)
-        print("[EmotionAnalyzer] Face cascade loaded.")
 
     if _eye_cascade is None:
         eye_path = cv2.data.haarcascades + "haarcascade_eye.xml"
         _eye_cascade = cv2.CascadeClassifier(eye_path)
-        print("[EmotionAnalyzer] Eye cascade loaded (for head pose).")
+
+# ── Preload immediately so first interview request is fast ─────────────────
+try:
+    _load_resources()
+except Exception as _e:
+    print(f"[EmotionAnalyzer] Preload failed (will retry on first request): {_e}")
 
 
 # ─── Head Pose (Pure OpenCV solvePnP) ────────────────────────────────────────
@@ -193,24 +196,11 @@ def _analyze_single_frame(frame: np.ndarray):
 def analyze_frames(frames: list) -> dict:
     """
     Analyze a list of base64 image frames captured during the interview answer.
-
-    Parameters
-    ----------
-    frames : list[str]
-        List of base64 data-URI strings (e.g., from React webcam snapshots).
-
-    Returns
-    -------
-    dict with keys:
-        - facial_score   : float (0-100)
-        - dominant_emotion : str
-        - facial_feedback  : str
-        - frames_analyzed  : int
+    Uses a SINGLE batched TF prediction for all frames (much faster than per-frame predict).
     """
-    _load_resources()
+    _load_resources()  # no-op on subsequent calls
 
     if _emotion_model is None:
-        # Model failed to load — return neutral placeholder
         return {
             "facial_score": 72.0,
             "dominant_emotion": "Neutral",
@@ -226,20 +216,26 @@ def analyze_frames(frames: list) -> dict:
             "frames_analyzed": 0
         }
 
-    results = []
-    emotion_counts = {}
+    # ── Step 1: Decode & detect faces for all frames ─────────────────────────
+    rois  = []          # face crops (48×48 gray) for batch prediction
+    face_rects = []     # (img, face_rect) pairs for head pose on first face only
+    imgs_with_faces = []
 
     for b64 in frames:
         img = _decode_frame(b64)
         if img is None:
             continue
-        result = _analyze_single_frame(img)
-        if result is None:
+        gray  = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = _face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+        if len(faces) == 0:
             continue
-        results.append(result)
-        emotion_counts[result["emotion"]] = emotion_counts.get(result["emotion"], 0) + 1
+        x, y, w, h = faces[0]
+        roi = cv2.resize(gray[y:y+h, x:x+w], (48, 48)).astype("float32") / 255.0
+        roi = np.expand_dims(roi, axis=-1)   # (48, 48, 1)
+        rois.append(roi)
+        imgs_with_faces.append((img, (x, y, w, h)))
 
-    if not results:
+    if not rois:
         return {
             "facial_score": 65.0,
             "dominant_emotion": "Unknown",
@@ -247,37 +243,53 @@ def analyze_frames(frames: list) -> dict:
             "frames_analyzed": 0
         }
 
-    scores = [r["confidence"] for r in results]
+    # ── Step 2: SINGLE batch prediction (key speed improvement) ──────────────
+    batch = np.stack(rois, axis=0)          # (N, 48, 48, 1)
+    predictions = _emotion_model.predict(batch, verbose=0)  # (N, 7)
+
+    # ── Step 3: Compute per-frame scores using batch results ─────────────────
+    results = []
+    emotion_counts = {}
+
+    for i, pred in enumerate(predictions):
+        emotion_idx   = int(np.argmax(pred))
+        raw_valence   = sum(float(pred[j]) * VALENCE_WEIGHTS[j] for j in range(7))
+        emotion_score = ((raw_valence + 1) / 2) * 100
+
+        # Head pose — only compute for first valid frame to save time
+        if i == 0:
+            img, face_rect = imgs_with_faces[i]
+            pitch, _ = _get_head_pose(img, face_rect)
+        # subsequent frames reuse the first frame's pitch (good enough approximation)
+
+        pose_penalty = 30.0 if pitch < -10 else 0.0
+        confidence   = max(0.0, min(100.0, emotion_score - pose_penalty))
+        emotion_name = EMOTIONS[emotion_idx]
+
+        results.append({"emotion": emotion_name, "confidence": round(confidence, 2)})
+        emotion_counts[emotion_name] = emotion_counts.get(emotion_name, 0) + 1
+
+    # ── Step 4: Aggregate ─────────────────────────────────────────────────────
+    scores    = [r["confidence"] for r in results]
     avg_score = sum(scores) / len(scores)
     dominant  = max(emotion_counts, key=emotion_counts.get)
 
-    # ── Emotional Stability Analysis ──────────────────────────────────────────
-    # Standard deviation of per-frame scores → measures how much emotion jumps
+    variance_penalty = 0.0
+    std_dev = 0.0
     if len(scores) > 1:
-        variance   = sum((s - avg_score) ** 2 for s in scores) / len(scores)
-        std_dev    = variance ** 0.5
-    else:
-        std_dev = 0.0
+        variance    = sum((s - avg_score) ** 2 for s in scores) / len(scores)
+        std_dev     = variance ** 0.5
+        variance_penalty = min(15.0, (std_dev / 30.0) * 15.0)
 
-    # Penalty: high std_dev (>15) means lots of emotion jumping → nervousness
-    # Max penalty = 15 points (when std_dev >= 30)
-    variance_penalty = min(15.0, (std_dev / 30.0) * 15.0)
-
-    # Bonus: dominant emotion coverage (how consistent the emotion was)
-    # e.g. if Happy appeared in 80% of frames → bonus up to 5 pts
     dominant_ratio  = emotion_counts[dominant] / len(results)
-    stability_bonus = dominant_ratio * 5.0   # max +5
-
-    final_score = max(0.0, min(100.0, avg_score - variance_penalty + stability_bonus))
-    final_score = round(final_score, 2)
-
-    # Human-readable feedback
-    feedback = _build_feedback(dominant, final_score, std_dev)
+    stability_bonus = dominant_ratio * 5.0
+    final_score     = max(0.0, min(100.0, avg_score - variance_penalty + stability_bonus))
+    final_score     = round(final_score, 2)
 
     return {
         "facial_score": final_score,
         "dominant_emotion": dominant,
-        "facial_feedback": feedback,
+        "facial_feedback": _build_feedback(dominant, final_score, std_dev),
         "frames_analyzed": len(results)
     }
 

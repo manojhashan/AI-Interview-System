@@ -4,6 +4,7 @@ import json
 
 from services.semantic_analyzer import analyze_semantic
 from services.emotion_analyzer import analyze_frames as analyze_emotion_frames
+from services.vocal_analyzer import analyze_audio as analyze_vocal_audio
 from services.xai_explainer import generate_xai_feedback
 
 
@@ -24,19 +25,18 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         
         prompt = f"""
         You are an expert technical interviewer. 
-        Generate {count} interview questions for a candidate applying for the role of '{job_role}'.
+        Generate exactly {count} interview questions for a candidate applying for the role of '{job_role}'.
         
         Here is the candidate's Resume/CV content:
         "{cv_text[:2000]}"... (truncated)
 
         INSTRUCTIONS:
-        1. Ask 2 questions about specific projects listed in the CV.
-        2. Ask 2 questions verifying specific skills listed.
-        3. Ask 2 challenging technical scenario questions related to the role.
+        - Generate exactly {count} questions total.
+        - Mix them: some about specific projects in the CV, some verifying listed skills, some technical scenario questions.
         
-        OUTPUT FORMAT:
-        Return ONLY a raw JSON array of objects.
-        Each object must have:
+        OUTPUT FORMAT (VERY IMPORTANT):
+        Return ONLY a valid JSON array, with no markdown, no code fences, no explanation.
+        Each object must have exactly these keys:
         - "id": "gen1", "gen2", etc.
         - "text": "The question string"
         - "category": "Technical" or "Project" or "Situational"
@@ -51,8 +51,13 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
             )
         )
         
-        # Response is guaranteed to be JSON string in response.text
-        questions = json.loads(response.text)
+        # Strip markdown code fences if present, then parse JSON
+        raw = response.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        questions = json.loads(raw.strip())
         
         # Ensure ID and keys are correct
         final_questions = []
@@ -217,42 +222,54 @@ def get_dummy_analysis(modality: str):
 def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None, frames: list = None):
     """
     Main entry point for analyzing an answer.
-    Integrates:
-    - Semantic Analysis (Real DistilBERT)
-    - Facial Analysis (Mock/Future Integration)
-    - Vocal Analysis (Mock/Future Integration)
+    Integrates semantic, facial, and vocal analysis — all run in PARALLEL
+    using ThreadPoolExecutor so the interview answer feedback is fast.
     """
-    
-    # 1. Real Semantic Analysis
-    # 23. Evaluate Candidate Answers
-    semantic_result = analyze_semantic(question, answer)
-    semantic_score = semantic_result["score"]
-    
-    # Generate Gemini Feedback
-    # 25. Generate AI Feedback using Gemini
-    gemini_feedback = generate_feedback_gemini(question, answer)
-    
-    # Combine semantic score with Gemini's qualitative feedback
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    # 1. Define each analysis as a callable
+    def run_semantic():
+        return analyze_semantic(question, answer)
+
+    def run_gemini_feedback():
+        return generate_feedback_gemini(question, answer)
+
+    def run_emotion():
+        return analyze_emotion_frames(frames or [])
+
+    def run_vocal():
+        return analyze_vocal_audio(audio_blob)
+
+    # 2. Run all 4 in parallel — total time ≈ max(semantic, gemini, emotion, vocal)
+    # instead of semantic + gemini + emotion + vocal (sequential)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        future_semantic = executor.submit(run_semantic)
+        future_gemini   = executor.submit(run_gemini_feedback)
+        future_emotion  = executor.submit(run_emotion)
+        future_vocal    = executor.submit(run_vocal)
+
+        semantic_result  = future_semantic.result()
+        gemini_feedback  = future_gemini.result()
+        facial_result    = future_emotion.result()
+        vocal_result     = future_vocal.result()
+
+    # 3. Process results
+    semantic_score   = semantic_result["score"]
     semantic_feedback = f"{semantic_result['feedback']} | {gemini_feedback}"
 
-    # 2. Real Facial Analysis (facial_emotion_model.h5 + MediaPipe Head Pose)
-    # 28. Generate Facial Feedback
-    facial_result  = analyze_emotion_frames(frames or [])
-    facial_score   = facial_result["facial_score"]
+    facial_score    = facial_result["facial_score"]
     facial_feedback = facial_result["facial_feedback"]
 
-    # 3. Mock Vocal Analysis (Placeholder for future Model Integration)
-    # TODO: Load .pt model and predict using 'audio_blob'
-    vocal_score = random.randint(70, 90)
-    vocal_feedback = "Clear voice but slight hesitation."
+    # 4. Vocal Analysis
+    vocal_score    = vocal_result["vocal_score"]
+    vocal_feedback = vocal_result["vocal_feedback"]
 
-    # 4. Calculate Overall Score (Weighted Average)
+    # 5. Calculate Overall Score (Weighted Average)
     # 26. Store Vocal Analysis Results (Returned in structure)
     # 29. Store Facial Analysis Results (Returned in structure)
-    # We combine all scores. Vocal and Facial are 40% each, Semantic is 20%.
     overall_score = int((semantic_score * 0.2) + (facial_score * 0.4) + (vocal_score * 0.4))
 
-    # 5. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
+    # 6. XAI — Explainable AI Feedback (SHAP-based, no Gemini)
     dominant_emotion = facial_result.get("dominant_emotion", "Neutral")
     xai_explanation  = generate_xai_feedback(
         vocal_score    = float(vocal_score),
@@ -282,3 +299,4 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
 # Ideally main.py should update to call analyze_answer_multimodal
 def get_dummy_answer_analysis():
     return analyze_answer_multimodal("Test Question", "This is a test answer.")
+

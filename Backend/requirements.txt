@@ -14,3 +14,5 @@ sentencepiece
 protobuf
 transformers
 torch
+librosa
+soundfile

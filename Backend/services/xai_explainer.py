@@ -26,10 +26,14 @@ WEIGHTS = {
 }
 
 # ── SHAP Contribution Calculator ──────────────────────────────────────────────
+# XAI Step 1: Calculate how much each modality pushed the score UP or DOWN
+# relative to the expected baseline (70). This is the core SHAP formula:
+#   φᵢ = wᵢ × (scoreᵢ − baseline)
 
 def compute_shap_contributions(vocal: float, facial: float, semantic: float) -> dict:
     """
-    Computes SHAP values for each modality.
+    XAI — SHAP Contribution Calculation
+    Computes Shapley values for each modality.
     phi_i = w_i * (x_i - baseline)
 
     Positive phi → modality boosted the overall score above baseline.
@@ -44,8 +48,12 @@ def compute_shap_contributions(vocal: float, facial: float, semantic: float) -> 
 
 
 # ── Per-Modality Rule-Based Explanations ─────────────────────────────────────
+# XAI Step 2: Convert raw scores + SHAP values into human-readable explanations
+# Each function generates a transparent sentence telling the candidate
+# exactly how that modality contributed to their overall score.
 
 def _explain_vocal(score: float, phi: float) -> str:
+    # XAI — Vocal Transparency: shows quality level + SHAP contribution direction
     """Generate transparent vocal explanation based on score range + SHAP value."""
     direction = f"contributed {abs(phi):+.1f} pts to overall score"
 
@@ -67,6 +75,7 @@ def _explain_vocal(score: float, phi: float) -> str:
 
 
 def _explain_facial(score: float, phi: float, dominant_emotion: str = "Neutral") -> str:
+    # XAI — Facial Transparency: includes dominant emotion detected during interview
     """Generate transparent facial explanation based on score, SHAP value, and emotion."""
     direction = f"contributed {abs(phi):+.1f} pts to overall score"
 
@@ -98,6 +107,7 @@ def _explain_facial(score: float, phi: float, dominant_emotion: str = "Neutral")
 
 
 def _explain_semantic(score: float, phi: float) -> str:
+    # XAI — Semantic Transparency: shows how relevant the answer was to the question
     """Generate transparent semantic explanation based on cosine similarity score + SHAP value."""
     direction = f"contributed {abs(phi):+.1f} pts to overall score"
 
@@ -121,6 +131,8 @@ def _explain_semantic(score: float, phi: float) -> str:
 
 
 # ── Main XAI Entry Point ───────────────────────────────────────────────────────
+# XAI Step 3: Aggregate all modality explanations + identify strongest/weakest
+# modality and generate a transparent overall summary for the candidate.
 
 def generate_xai_feedback(
     vocal_score: float,
@@ -143,13 +155,15 @@ def generate_xai_feedback(
         - semantic_xai   : explainable semantic feedback string
         - summary_xai    : overall transparent explanation
     """
+    # XAI Step 1 — Compute SHAP φ for each modality
     phi = compute_shap_contributions(vocal_score, facial_score, semantic_score)
 
+    # XAI Step 2 — Generate per-modality transparent explanations
     vocal_xai    = _explain_vocal(vocal_score, phi["vocal"])
     facial_xai   = _explain_facial(facial_score, phi["facial"], dominant_emotion)
     semantic_xai = _explain_semantic(semantic_score, phi["semantic"])
 
-    # Identify strongest and weakest modalities
+    # XAI Step 3 — Identify which modality helped most and which hurt most
     strongest = max(phi, key=phi.get)
     weakest   = min(phi, key=phi.get)
 

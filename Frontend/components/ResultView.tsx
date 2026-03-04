@@ -121,13 +121,18 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack, isAdmin = fal
             </span>
           </div>
 
-          {/* Summary */}
+          {/* XAI Display Step 1 — Overall SHAP Summary
+              Shows candidate how far above/below baseline they scored
+              and which modality was strongest/weakest */}
           <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-2xl p-5">
             <p className="text-emerald-300 font-semibold text-sm mb-1">Overall Explanation</p>
             <p className="text-slate-300 text-sm leading-relaxed">{result.xai.summary_xai}</p>
           </div>
 
-          {/* SHAP Contribution Bars */}
+          {/* XAI Display Step 2 — SHAP Contribution Bars
+              Green bar = modality pushed score UP (positive φ)
+              Red bar   = modality pulled score DOWN (negative φ)
+              Bar width proportional to absolute φ value */}
           <div className="space-y-4">
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">SHAP Contribution per Modality</p>
             {[
@@ -150,7 +155,11 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack, isAdmin = fal
             ))}
           </div>
 
-          {/* Per-Modality XAI Explanations */}
+          {/* XAI Display Step 3 — Per-Modality Transparent Explanations
+              Each card shows the candidate exactly:
+              - Quality level of that modality
+              - Whether it helped (+) or hurt (-) the overall score
+              - Specific tip for improvement */}
           <div className="grid lg:grid-cols-3 gap-6">
             {[
               { label: '🎙 Vocal',    text: result.xai.vocal_xai,    border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },

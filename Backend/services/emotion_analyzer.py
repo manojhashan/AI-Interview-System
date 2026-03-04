@@ -152,6 +152,10 @@ def _decode_frame(b64_image: str):
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
+# 27. Capture Facial Expressions
+# Receives base64 image frames captured during the interview by the React frontend webcam
+# 28. Analyze Facial Features — runs emotion model + head pose on each frame
+# 29. Store Facial Analysis Results — returns dict stored in InterviewResult by main.py
 def analyze_frames(frames: list) -> dict:
     """
     Analyze a list of base64 image frames captured during the interview answer.
@@ -175,7 +179,7 @@ def analyze_frames(frames: list) -> dict:
             "frames_analyzed": 0
         }
 
-    # ── Step 1: Decode & detect faces for all frames ─────────────────────────
+    # 28. Analyze Facial Features — Step 1: Decode frames + Haar face detection
     rois           = []   # face crops (48×48 gray) for batch prediction
     imgs_with_faces = []
 
@@ -201,11 +205,11 @@ def analyze_frames(frames: list) -> dict:
             "frames_analyzed": 0
         }
 
-    # ── Step 2: SINGLE batch prediction (key speed improvement) ──────────────
+    # 28. Analyze Facial Features — Step 2: Single batch CNN prediction (faster)
     batch = np.stack(rois, axis=0)          # (N, 48, 48, 1)
     predictions = _emotion_model.predict(batch, verbose=0)  # (N, 7)
 
-    # ── Step 3: Compute per-frame scores using batch results ─────────────────
+    # 28. Analyze Facial Features — Step 3: Head pose + valence score per frame────
     results = []
     emotion_counts = {}
     pitch = 0.0
@@ -244,6 +248,7 @@ def analyze_frames(frames: list) -> dict:
     final_score     = max(0.0, min(100.0, avg_score - variance_penalty + stability_bonus))
     final_score     = round(final_score, 2)
 
+    # 29. Store Facial Analysis Results — aggregate and return
     return {
         "facial_score":      final_score,
         "dominant_emotion":  dominant,

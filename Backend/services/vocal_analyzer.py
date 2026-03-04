@@ -35,6 +35,8 @@ except Exception as _e:
     print(f"[VocalAnalyzer] Preload failed (will retry on first request): {_e}")
 
 
+# 24. Capture Audio Input
+# Decode base64 WAV audio sent from the frontend recorder
 def _decode_audio(b64_audio: str) -> str:
     """Decodes base64 audio and saves to a temporary WAV file, returns the file path."""
     try:
@@ -53,6 +55,9 @@ def _decode_audio(b64_audio: str) -> str:
         print(f"[VocalAnalyzer] Audio decode error: {e}")
         return None
 
+# 24. Analyze Vocal Features — pitch, energy, speech rate via Mel-spectrogram + CNN model
+# 25. Generate Vocal Feedback — returns score + human-readable feedback
+# 26. Store Vocal Analysis Results — returned dict stored in InterviewResult by main.py
 def analyze_audio(b64_audio: str) -> dict:
     import librosa
     
@@ -99,10 +104,11 @@ def analyze_audio(b64_audio: str) -> dict:
         # Reshape for model input (1, 64, 128, 1)
         features = mel_spec_db.reshape(1, 64, 128, 1)
         
-        # Predict using model
+        # 24. Analyze Vocal Features
+        # Mel-spectrogram fed to CNN model → confident (1) / not confident (0)
         predictions = _vocal_model.predict(features, verbose=0)[0]
         
-        # Output shape is 2. Assuming index 1 = Confident
+        # Class index 1 = Confident — score scaled to 0–100
         vocal_score = float(predictions[1]) * 100
         
         if vocal_score >= 80:
@@ -112,6 +118,7 @@ def analyze_audio(b64_audio: str) -> dict:
         else:
             feedback = "Try to speak more clearly and steadily to improve vocal confidence."
             
+        # 26. Store Vocal Analysis Results
         return {
             "vocal_score": round(max(0.0, min(100.0, vocal_score)), 2),
             "vocal_feedback": feedback

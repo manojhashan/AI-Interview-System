@@ -25,6 +25,9 @@ def get_model():
             raise e
     return _model
 
+# 23. Evaluate Candidate Answers
+# Measures semantic relevance of candidate's answer vs the interview question
+# using SentenceTransformer cosine similarity (all-MiniLM-L6-v2)
 def analyze_semantic(question: str, answer: str) -> dict:
     """
     Analyzes the semantic relationship between the question and the answer.
@@ -43,10 +46,12 @@ def analyze_semantic(question: str, answer: str) -> dict:
         # specific instructions to the model could be added here if using a generative model,
         # but for embedding similarity, we interact directly with embeddings.
 
-        # Compute embeddings
+        # 23. Evaluate Candidate Answers — Step 1: Generate sentence embeddings
+        # Both question and answer converted to 384-dim semantic vectors
         embeddings = model.encode([question, answer], convert_to_tensor=True)
 
-        # Compute cosine similarity
+        # 23. Evaluate Candidate Answers — Step 2: Cosine Similarity
+        # Measures angle between vectors (1.0 = identical meaning, 0.0 = unrelated)
         cosine_scores = util.cos_sim(embeddings[0], embeddings[1])
         
         # We calculate how close the two sentences are mathmatically.

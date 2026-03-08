@@ -1,6 +1,7 @@
 import random
 import os
 import json
+import traceback
 
 from services.semantic_analyzer import analyze_semantic
 from services.emotion_analyzer import analyze_frames as analyze_emotion_frames
@@ -9,10 +10,11 @@ from services.xai_explainer import generate_xai_feedback
 
 
 # Configure Gemini
-api_key = os.getenv("GEMINI_API_KEY")
+def get_gemini_api_key():
+    return os.getenv("GEMINI_API_KEY")
 
 def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
-    
+    api_key = get_gemini_api_key()
     if not api_key:
         print("DEBUG: No GEMINI_API_KEY found, skipping AI generation.")
         return []
@@ -42,14 +44,27 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         - "category": "Technical" or "Project" or "Situational"
         """
 
-        # Use Gemini Flash Latest (2.0 hit quota limit)
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type='application/json'
-            )
-        )
+        # Try models in order: lite (1500/day free) → 1.5-flash → flash-latest
+        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-flash-latest']
+        response = None
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type='application/json'
+                    )
+                )
+                print(f"DEBUG: Used model: {model_name}")
+                break
+            except Exception as me:
+                print(f"DEBUG: Model {model_name} failed: {me}")
+                last_error = me
+                continue
+        if response is None:
+            raise last_error
         
         # Strip markdown code fences if present, then parse JSON
         raw = response.text.strip()
@@ -72,7 +87,8 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         return final_questions
 
     except Exception as e:
-        print(f"ERROR: Gemini Generation failed: {e}")
+        print(f"ERROR: Gemini Question Generation failed: {e}")
+        traceback.print_exc()
         return []
 
 def generate_feedback_gemini(question: str, answer: str, job_role: str = "Candidate") -> str:
@@ -80,13 +96,13 @@ def generate_feedback_gemini(question: str, answer: str, job_role: str = "Candid
     Generates feedback for an interview answer using Gemini API.
     Replaces the T5-based feedback generation.
     """
+    api_key = get_gemini_api_key()
     if not answer or len(answer.strip()) < 5:
         return "Answer too short to evaluate."
     if not api_key:
         return "Feedback unavailable (no API key)."
     try:
         from google import genai
-        from google.genai import types
         client = genai.Client(api_key=api_key)
         prompt = (
             f"You are an expert interview coach evaluating a candidate's answer.\n"
@@ -95,20 +111,24 @@ def generate_feedback_gemini(question: str, answer: str, job_role: str = "Candid
             f"Candidate's Answer: {answer}\n\n"
             f"Provide a single sentence identifying ONE Strength and ONE Area for Improvement."
         )
+        
+        # Only use the free/lite model for per-question feedback to save tokens
         response = client.models.generate_content(
-            model='gemini-flash-latest',
+            model='gemini-2.0-flash-lite',
             contents=prompt
         )
+
         return response.text.strip()
     except Exception as e:
-        print(f"ERROR: Gemini feedback failed: {e}")
-        return "Feedback unavailable."
+        print(f"ERROR: Gemini feedback failed (likely quota/token limit): {e}")
+        return "AI Feedback currently unavailable due to system limits."
 
 def generate_overall_summary_gemini(interview_details: list, job_role: str) -> str:
     """
     Generates an overall interview summary using Gemini API.
     Replaces T5-based summary generation.
     """
+    api_key = get_gemini_api_key()
     if not api_key:
         return "Summary unavailable (no API key)."
     try:
@@ -125,10 +145,25 @@ def generate_overall_summary_gemini(interview_details: list, job_role: str) -> s
             f"{combined_text}\n"
             f"In 2-3 sentences, provide clear and actionable overall advice to help this candidate improve."
         )
-        response = client.models.generate_content(
-            model='gemini-flash-latest',
-            contents=prompt
-        )
+        
+        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-flash-latest']
+        response = None
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                break
+            except Exception as me:
+                print(f"DEBUG: Summary model {model_name} failed: {me}")
+                last_error = me
+                continue
+                
+        if response is None:
+            raise last_error
+
         return response.text.strip()
     except Exception as e:
         print(f"ERROR: Gemini summary failed: {e}")

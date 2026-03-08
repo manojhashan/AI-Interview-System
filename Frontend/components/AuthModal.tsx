@@ -325,7 +325,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               ) : (
                 <>
                   {view === 'login' && 'Sign In Now'}
-                  {view === 'signup' && 'Start Free Trial'}
+                  {view === 'signup' && 'Create Account'}
                   {view === 'forgot-password' && 'Send Reset Code'}
                   {view === 'otp-verify' && 'Verify Code'}
                   {view === 'reset-password' && 'Update Password'}
@@ -339,16 +339,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
             {view === 'login' ? (
               <p className="text-sm text-slate-500">
                 Don't have an account?{' '}
-                <button onClick={() => setView('signup')} className="text-blue-400 font-bold hover:underline">Sign Up</button>
+                <button type="button" onClick={() => setView('signup')} className="text-blue-400 font-bold hover:underline">Sign Up</button>
               </p>
             ) : view === 'signup' ? (
               <p className="text-sm text-slate-500">
                 Already have an account?{' '}
-                <button onClick={() => setView('login')} className="text-blue-400 font-bold hover:underline">Log In</button>
+                <button type="button" onClick={() => setView('login')} className="text-blue-400 font-bold hover:underline">Sign In</button>
               </p>
             ) : (
-              <button onClick={() => setView('login')} className="flex items-center gap-2 text-sm text-slate-400 mx-auto hover:text-white transition-colors">
-                <ArrowLeft size={16} /> Back to login
+              <button type="button" onClick={() => setView('login')} className="flex items-center gap-2 text-sm text-slate-400 mx-auto hover:text-white transition-colors">
+                <ArrowLeft size={16} /> Back to Sign In
               </button>
             )}
           </div>

@@ -67,23 +67,29 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     const buffer = new ArrayBuffer(44 + dataSize);
     const view = new DataView(buffer);
     const writeStr = (offset: number, str: string) => {
-      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      for (let i = 0; i < str.length; i++)
+        view.setUint8(offset + i, str.charCodeAt(i));
     };
-    writeStr(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true);
-    writeStr(8, 'WAVE'); writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
+    writeStr(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
     view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
     view.setUint16(32, numChannels * (bitDepth / 8), true);
     view.setUint16(34, bitDepth, true);
-    writeStr(36, 'data'); view.setUint32(40, dataSize, true);
+    writeStr(36, "data");
+    view.setUint32(40, dataSize, true);
     let offset = 44;
     for (let i = 0; i < length; i++) {
       const s = Math.max(-1, Math.min(1, leftChannel[i]));
       view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
       offset += 2;
     }
-    return new Blob([buffer], { type: 'audio/wav' });
+    return new Blob([buffer], { type: "audio/wav" });
   };
 
   // Converts a WebM Blob to a base64 WAV string
@@ -127,10 +133,19 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     }
   }, [step, currentQuestionIdx, questions, isMuted]);
 
-  // Clean up speech on component unmount
+  // Clean up speech and media streams on component unmount
   useEffect(() => {
     return () => {
       window.speechSynthesis.cancel();
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if ((window as any)._frameCaptureInterval) {
+        clearInterval((window as any)._frameCaptureInterval);
+      }
     };
   }, []);
 
@@ -219,7 +234,10 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
         audioStreamRef.current.getTracks().forEach((t) => t.stop());
         audioStreamRef.current = null;
       }
-      alert(err?.message || "Error: Camera and Microphone are required. Please check browser permissions and try again.");
+      alert(
+        err?.message ||
+          "Error: Camera and Microphone are required. Please check browser permissions and try again.",
+      );
       setIsProcessing(false);
       setStep("selection"); // Go back
     }
@@ -229,7 +247,6 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     // 20. Readiness Confirmation Handling
     setStep("active");
   };
-
 
   const isRecordingRef = useRef(false);
 
@@ -251,9 +268,13 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   const recognitionRef = useRef<any>(null);
 
   const startSpeechRecognition = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
     if (!SR) {
-      alert("Your browser does not support Speech Recognition. Please use Chrome or Edge.");
+      alert(
+        "Your browser does not support Speech Recognition. Please use Chrome or Edge.",
+      );
       return;
     }
 
@@ -310,7 +331,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
 
     // Start frame capture
     if ((window as any)._frameCaptureInterval) {
-        clearInterval((window as any)._frameCaptureInterval);
+      clearInterval((window as any)._frameCaptureInterval);
     }
     const intervalId = setInterval(captureFrame, 2000);
     (window as any)._frameCaptureInterval = intervalId;
@@ -340,22 +361,29 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     clearInterval((window as any)._frameCaptureInterval);
 
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(e) {}
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
       recognitionRef.current = null;
     }
 
     // Stop audio recorder and collect chunks
     let audioBlobBase64: string | undefined = undefined;
-    if (audioMediaRecorderRef.current && audioMediaRecorderRef.current.state !== 'inactive') {
+    if (
+      audioMediaRecorderRef.current &&
+      audioMediaRecorderRef.current.state !== "inactive"
+    ) {
       audioBlobBase64 = await new Promise<string | undefined>((resolve) => {
         const recorder = audioMediaRecorderRef.current!;
         recorder.onstop = async () => {
           try {
-            const webmBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const webmBlob = new Blob(audioChunksRef.current, {
+              type: "audio/webm",
+            });
             const wavBase64 = await convertBlobToWavBase64(webmBlob);
             resolve(wavBase64);
           } catch (e) {
-            console.warn('[VocalAnalyzer] WAV conversion failed:', e);
+            console.warn("[VocalAnalyzer] WAV conversion failed:", e);
             resolve(undefined);
           }
         };
@@ -367,15 +395,18 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     try {
       const question = questions[currentQuestionIdx].text;
       const fullTranscript = (transcript + interimTranscript).trim();
-      const answerText =
-        fullTranscript.length > 0
-          ? fullTranscript
-          : "No audio detected. (Please ensure you speak clearly or check microphone permissions)";
+      const noSpeechDetected = fullTranscript.length === 0;
+      const answerText = noSpeechDetected
+        ? "No audio detected. (Please ensure you speak clearly or check microphone permissions)"
+        : fullTranscript;
+
+      // If no speech transcript, don't send audio blob — vocal score should be 0
+      const audioToSend = noSpeechDetected ? undefined : audioBlobBase64;
 
       const analysis = await geminiService.analyzeAnswer(
         question,
         answerText,
-        audioBlobBase64,
+        audioToSend,
         frames,
       );
 
@@ -421,11 +452,21 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     if (sessionDetails.length === 0) return;
 
     // Helper to calculate average safely
+    // vocal: always average ALL scores including 0 (0 = no speech detected, must be reflected)
+    // facial/semantic: skip 0s from failed API calls and fallback to 70
     const avg = (key: keyof ConfidenceScore) => {
-      if (sessionDetails.length === 0) return 0;
+      if (key === "vocal") {
+        // Vocal 0 is intentional (no speech) — include in average
+        return Math.round(
+          sessionDetails.reduce((sum, d) => sum + d.scores[key], 0) /
+            sessionDetails.length,
+        );
+      }
+      const validDetails = sessionDetails.filter((d) => d.scores[key] > 0);
+      if (validDetails.length === 0) return 70; // baseline fallback for API failures
       return Math.round(
-        sessionDetails.reduce((sum, d) => sum + d.scores[key], 0) /
-          sessionDetails.length,
+        validDetails.reduce((sum, d) => sum + d.scores[key], 0) /
+          validDetails.length,
       );
     };
 
@@ -767,8 +808,6 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
                   </button>
                 )}
               </div>
-
-
 
               {isProcessing && (
                 <div className="p-4 bg-slate-800 rounded-xl flex items-center justify-center gap-3 animate-pulse">

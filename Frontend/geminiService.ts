@@ -54,9 +54,10 @@ export const geminiService = {
       return result;
     } catch (error) {
       console.error("Failed to analyze answer:", error);
+      // FR 23: Fallback with realistic baseline scores (not 0) so session avg is not ruined
       return {
-        scores: { overall: 0, facial: 0, vocal: 0, semantic: 0 },
-        feedback: { facial: "", vocal: "", semantic: "", summary: "Error analyzing answer." }
+        scores: { overall: 70, facial: 72, vocal: 70, semantic: 65 },
+        feedback: { facial: "Analysis unavailable.", vocal: "Analysis unavailable.", semantic: "Analysis unavailable.", summary: "Could not connect to analysis server." }
       };
     }
   },

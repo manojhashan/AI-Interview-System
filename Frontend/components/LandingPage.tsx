@@ -48,7 +48,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ isLoggedIn, onGetStarted, onG
                   onClick={() => onGetStarted('signup')}
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-full text-sm font-bold transition-all shadow-lg shadow-blue-600/20"
                 >
-                  Sign Up Free
+                  Sign Up
                 </button>
               </>
             )}
@@ -81,7 +81,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ isLoggedIn, onGetStarted, onG
                 onClick={() => onGetStarted('signup')}
                 className="w-full sm:w-auto px-10 py-5 bg-white text-slate-950 rounded-2xl font-bold text-lg hover:bg-slate-200 transition-all flex items-center justify-center gap-2 group"
               >
-                Start Free Trial <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+                Start Interview <ChevronRight className="group-hover:translate-x-1 transition-transform" />
               </button>
             )}
           </div>

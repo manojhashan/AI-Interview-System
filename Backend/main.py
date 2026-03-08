@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)
 
 # --- Config ---
 import bcrypt
@@ -206,10 +206,10 @@ def get_resume_data(orm_resume):
 def get_result_data(orm_result):
     candidate_id = orm_result.resume.user_id if orm_result.resume else "Unknown"
 
-    vocal_score    = float(orm_result.vocal_score    or 70)
-    facial_score   = float(orm_result.facial_score   or 70)
-    semantic_score = float(orm_result.semantic_score or 70)
-    overall_score  = float(orm_result.overall_score  or 70)
+    vocal_score    = float(orm_result.vocal_score    if orm_result.vocal_score is not None else 70)
+    facial_score   = float(orm_result.facial_score   if orm_result.facial_score is not None else 70)
+    semantic_score = float(orm_result.semantic_score if orm_result.semantic_score is not None else 70)
+    overall_score  = float(orm_result.overall_score  if orm_result.overall_score is not None else 70)
 
     # Compute XAI on-the-fly from stored scores (works for ALL interviews, old & new)
     xai_data = generate_xai_feedback(

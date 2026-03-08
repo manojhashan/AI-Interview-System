@@ -71,8 +71,8 @@ def analyze_audio(b64_audio: str) -> dict:
         
     if not b64_audio:
         return {
-            "vocal_score": 70.0,
-            "vocal_feedback": "No audio provided for analysis."
+            "vocal_score": 0.0,
+            "vocal_feedback": "No speech detected. Please speak clearly when answering."
         }
         
     temp_path = _decode_audio(b64_audio)

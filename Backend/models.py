@@ -15,6 +15,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password = Column(String)
     role = Column(String)
+    preferred_language = Column(String, default="en-US")
     
     # Relationships
     # This connects the User to their Resumes. One user can have many resumes.

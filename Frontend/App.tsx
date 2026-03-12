@@ -11,10 +11,19 @@ import AdminDashboard from './components/AdminDashboard';
 import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import HistoryView from './components/HistoryView';
-import { Trash2, PlusCircle, Briefcase, User as UserIcon } from 'lucide-react';
+import { Trash2, PlusCircle, Briefcase, User as UserIcon, Globe } from 'lucide-react';
 import UserProfile from './components/UserProfile';
 
 import { Toaster } from 'react-hot-toast';
+
+const LANGUAGE_OPTIONS = [
+  { value: 'en-US', label: 'En-US' },
+  { value: 'en-GB', label: 'En-GB' },
+  { value: 'en-AU', label: 'En-AU' },
+  { value: 'en-IN', label: 'En-IN' },
+  { value: 'en-ZA', label: 'En-ZA' },
+  { value: 'en-LK', label: 'En-LK' },
+];
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +31,7 @@ const App: React.FC = () => {
   const [showAuth, setShowAuth] = useState<{ mode: 'login' | 'signup' } | null>(null);
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
 
   // Load user resumes from localStorage on login or initialization
   // Load user resumes from API on login or initialization
@@ -54,12 +64,13 @@ const App: React.FC = () => {
     }
   }, [user?.id]); // Depend on ID to re-fetch resumes if user changes
 
-  const handleLoginSuccess = async (role: UserRole, email: string, name: string, userId: string) => {
+  const handleLoginSuccess = async (role: UserRole, email: string, name: string, userId: string, preferredLanguage?: string) => {
     const newUser: User = {
       id: userId,
       name: name,
       email: email,
       role: role,
+      preferredLanguage: preferredLanguage || "en-US",
       resumes: [] 
     };
     setUser(newUser);
@@ -72,6 +83,16 @@ const App: React.FC = () => {
     setUser(null);
     localStorage.removeItem('zynergy_user');
     setCurrentPage('landing');
+  };
+
+  const handleLanguageChange = async (newLang: string) => {
+    if (!user) return;
+    const updatedUser = { ...user, preferredLanguage: newLang };
+    setUser(updatedUser);
+    localStorage.setItem('zynergy_user', JSON.stringify(updatedUser));
+    setShowLangDropdown(false);
+    // Save to backend silently
+    await geminiService.updateUser(user.id, { preferred_language: newLang });
   };
 
   const saveResume = async (resume: ResumeData) => {
@@ -186,13 +207,54 @@ const App: React.FC = () => {
                 <p className="text-slate-400 text-sm">Welcome back, {user?.name || 'Guest'}</p>
               </div>
               
-              <div onClick={() => setCurrentPage('user-profile')} className="flex items-center gap-3 cursor-pointer group hover:opacity-80 transition-opacity">
-                  <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 group-hover:border-blue-500/50 transition-colors">
-                      <UserIcon className="text-slate-400 group-hover:text-blue-400" size={20} />
+              <div className="flex items-center gap-4">
+                  {/* Language Quick Selector */}
+                  <div className="relative">
+                      <button
+                        onClick={() => setShowLangDropdown(!showLangDropdown)}
+                        title="Improves the accuracy of your interview answer recognition"
+                        className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-xl px-3.5 py-2.5 hover:border-blue-500/40 transition-all text-xs font-bold text-slate-300 hover:text-white"
+                      >
+                        <Globe size={14} className="text-blue-400" />
+                        {LANGUAGE_OPTIONS.find(o => o.value === (user?.preferredLanguage || 'en-US'))?.label || 'En-US'}
+                        <svg width="10" height="10" viewBox="0 0 10 10" className={`text-slate-500 transition-transform ${showLangDropdown ? 'rotate-180' : ''}`}>
+                          <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                      {showLangDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowLangDropdown(false)} />
+                          <div className="absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl shadow-black/40 overflow-hidden min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
+                            {LANGUAGE_OPTIONS.map(opt => (
+                              <button
+                                key={opt.value}
+                                onClick={() => handleLanguageChange(opt.value)}
+                                className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-all flex items-center gap-2 ${
+                                  (user?.preferredLanguage || 'en-US') === opt.value
+                                    ? 'bg-blue-600/20 text-blue-400'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                }`}
+                              >
+                                {(user?.preferredLanguage || 'en-US') === opt.value && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                )}
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                   </div>
-                  <div className="text-right hidden sm:block">
-                        <p className="text-slate-200 text-sm font-bold">{user?.name || 'Guest'}</p>
-                        <p className="text-slate-500 text-xs">{user?.email}</p>
+
+                  {/* Profile Icon */}
+                  <div onClick={() => setCurrentPage('user-profile')} className="flex items-center gap-3 cursor-pointer group hover:opacity-80 transition-opacity">
+                      <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 group-hover:border-blue-500/50 transition-colors">
+                          <UserIcon className="text-slate-400 group-hover:text-blue-400" size={20} />
+                      </div>
+                      <div className="text-right hidden sm:block">
+                            <p className="text-slate-200 text-sm font-bold">{user?.name || 'Guest'}</p>
+                            <p className="text-slate-500 text-xs">{user?.email}</p>
+                      </div>
                   </div>
               </div>
             </header>

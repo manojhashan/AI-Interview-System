@@ -25,6 +25,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  preferredLanguage?: string;
   resumes: ResumeData[];
 }
 

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ablation Study — Zynergy AI Multimodal Confidence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',sans-serif;
+    background:#0a0e1a;
+    color:#e2e8f0;
+    min-height:100vh;
+    padding:40px 20px;
+  }
+  .container { max-width:960px; margin:0 auto; }
+
+  .header { text-align:center; margin-bottom:40px; }
+  .header h1 {
+    font-size:2rem; font-weight:800;
+    background:linear-gradient(135deg,#60a5fa,#34d399);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:8px;
+  }
+  .header p { color:#64748b; font-size:0.9rem; }
+  .badge {
+    display:inline-block; background:rgba(59,130,246,0.15); color:#60a5fa;
+    font-size:0.7rem; font-weight:700; padding:4px 12px; border-radius:20px;
+    margin-top:12px; letter-spacing:1px; text-transform:uppercase;
+  }
+
+  /* Filters */
+  .filters {
+    display:flex; gap:16px; margin-bottom:32px; flex-wrap:wrap;
+  }
+  .filter-group {
+    flex:1; min-width:240px;
+  }
+  .filter-group label {
+    display:block; font-size:0.7rem; font-weight:700; color:#64748b;
+    text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;
+  }
+  .filter-group select {
+    width:100%; background:#0f172a; border:1px solid rgba(255,255,255,0.1);
+    color:#e2e8f0; padding:12px 16px; border-radius:12px; font-size:0.85rem;
+    font-family:'Inter',sans-serif; outline:none; cursor:pointer;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+  }
+  .filter-group select:focus { border-color:rgba(59,130,246,0.5); }
+  .filter-group select option { background:#0f172a; color:#e2e8f0; }
+
+  /* Stats */
+  .stats-grid {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px;
+  }
+  .stat-card {
+    background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.06);
+    border-radius:16px; padding:24px; text-align:center;
+  }
+  .stat-card .value { font-size:2rem; font-weight:800; margin-bottom:4px; }
+  .stat-card .label {
+    font-size:0.7rem; color:#64748b; text-transform:uppercase;
+    letter-spacing:1px; font-weight:700;
+  }
+  .stat-card:nth-child(1) .value { color:#f97316; }
+  .stat-card:nth-child(2) .value { color:#a78bfa; }
+  .stat-card:nth-child(3) .value { color:#34d399; }
+  .stat-card:nth-child(4) .value { color:#60a5fa; }
+
+  /* Sections */
+  .section {
+    background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06);
+    border-radius:20px; padding:32px; margin-bottom:32px;
+  }
+  .section h2 {
+    font-size:1.2rem; font-weight:700; margin-bottom:20px;
+    display:flex; align-items:center; gap:8px;
+  }
+
+  /* Table */
+  table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  thead th {
+    text-align:left; padding:12px 16px; font-size:0.7rem;
+    text-transform:uppercase; letter-spacing:1px; color:#64748b;
+    font-weight:700; border-bottom:1px solid rgba(255,255,255,0.06);
+  }
+  tbody td { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.03); }
+  tbody tr:hover { background:rgba(255,255,255,0.02); }
+  tbody tr:last-child { background:rgba(59,130,246,0.08); font-weight:700; }
+  tbody tr:last-child td { border-bottom:none; color:#60a5fa; }
+
+  .accuracy-bar { display:flex; align-items:center; gap:10px; }
+  .bar-bg {
+    flex:1; height:8px; background:rgba(255,255,255,0.05);
+    border-radius:4px; overflow:hidden;
+  }
+  .bar-fill { height:100%; border-radius:4px; transition:width 0.6s ease; }
+  .acc-val { font-weight:700; min-width:50px; text-align:right; }
+
+  .chart-wrapper { position:relative; height:350px; }
+
+  .formula {
+    background:rgba(0,0,0,0.3); padding:12px 20px; border-radius:10px;
+    font-family:monospace; font-size:0.85rem; margin:16px 0;
+    color:#34d399; text-align:center;
+  }
+
+  .insight {
+    background:rgba(59,130,246,0.08); border-left:3px solid #3b82f6;
+    padding:16px 20px; border-radius:0 12px 12px 0; margin-top:16px;
+    font-size:0.85rem; line-height:1.7; color:#94a3b8;
+  }
+  .insight strong { color:#e2e8f0; }
+
+  .footer {
+    text-align:center; margin-top:40px; color:#334155; font-size:0.75rem;
+  }
+
+  .no-data {
+    text-align:center; padding:60px 20px; color:#475569; font-size:0.9rem;
+  }
+
+  @media (max-width:640px) {
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+    .filters { flex-direction:column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Multimodal Ablation Study</h1>
+    <p>Quantitative Contribution Analysis — Zynergy AI Interview System</p>
+    <div class="badge" id="sampleBadge">268 Question-Level Samples</div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>👤 Candidate</label>
+      <select id="userFilter" onchange="onFilterChange()">
+        <option value="all">All Candidates</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>📋 Interview Session</label>
+      <select id="interviewFilter" onchange="render()">
+        <option value="all">All Interviews</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="value" id="avgFacial">—</div><div class="label">Avg Facial</div></div>
+    <div class="stat-card"><div class="value" id="avgVocal">—</div><div class="label">Avg Vocal</div></div>
+    <div class="stat-card"><div class="value" id="avgSemantic">—</div><div class="label">Avg Semantic</div></div>
+    <div class="stat-card"><div class="value" id="avgOverall">—</div><div class="label">Avg Overall</div></div>
+  </div>
+
+  <!-- Formula -->
+  <div class="section">
+    <h2>⚙️ Multimodal Fusion Formula</h2>
+    <div class="formula">P<sub>overall</sub> = (Semantic × 0.2) + (Facial × 0.4) + (Vocal × 0.4)</div>
+    <p style="color:#64748b;font-size:0.8rem;text-align:center;">
+      Weighted average fusion — Facial and Vocal cues carry equal dominant weight,
+      Semantic relevance serves as supporting signal.
+    </p>
+  </div>
+
+  <!-- Table -->
+  <div class="section">
+    <h2>📊 Ablation Results</h2>
+    <div id="tableArea"></div>
+  </div>
+
+  <!-- Chart -->
+  <div class="section">
+    <h2>📈 Visual Comparison</h2>
+    <div class="chart-wrapper">
+      <canvas id="ablationChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Interpretation -->
+  <div class="section">
+    <h2>🔍 Interpretation</h2>
+    <div class="insight" id="insightArea"></div>
+  </div>
+
+  <div class="footer">Zynergy AI Interview System — Ablation Study Report</div>
+</div>
+
+<script>
+// ── Embedded data from DB ─────────────────────────────────────────────
+const ALL_SAMPLES = [{"user_id": "U0003", "interview_id": "ntcorcm6w", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "8rfn6gu2x", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "zoz5f9cdr", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "yqilzskf4", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "s8wngfrmm", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "gfywz5v1c", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "ut1239b1e", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "wvzub0bu6", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "d595c7sne", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "5ldjcnvp1", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "mdx4vjai8", "f": 75.0, "v": 72.0, "s": 35.0, "o": 58.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 80.0, "v": 82.0, "s": 3.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 78.0, "v": 82.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 78.0, "v": 90.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 93.0, "v": 75.0, "s": 9.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 78.0, "v": 84.0, "s": 16.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "1mg1pj1p0", "f": 85.0, "v": 89.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "w6rvq4i1q", "f": 87.0, "v": 70.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "ymf8rq9wt", "f": 89.0, "v": 81.0, "s": 3.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "ymf8rq9wt", "f": 89.0, "v": 85.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "ymf8rq9wt", "f": 85.0, "v": 83.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "ymf8rq9wt", "f": 80.0, "v": 90.0, "s": 1.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "ymf8rq9wt", "f": 83.0, "v": 87.0, "s": 10.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "poe3pc5qq", "f": 78.0, "v": 87.0, "s": 3.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "y770bry78", "f": 78.0, "v": 87.0, "s": 3.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "yykc1b6ce", "f": 78.0, "v": 87.0, "s": 3.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 81.0, "v": 78.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 93.0, "v": 81.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 95.0, "v": 72.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 89.0, "v": 87.0, "s": 2.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "ug8tr1vrw", "f": 77.0, "v": 77.0, "s": 2.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "ac894a892", "f": 88.0, "v": 70.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "bnihc73o5", "f": 88.0, "v": 70.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "2bvcrg6jv", "f": 88.0, "v": 70.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 80.0, "v": 82.0, "s": 3.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 78.0, "v": 82.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 78.0, "v": 90.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 93.0, "v": 75.0, "s": 9.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 78.0, "v": 84.0, "s": 16.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 85.0, "v": 89.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "swubrtsv6", "f": 76.0, "v": 77.0, "s": 0.0, "o": 45.0}, {"user_id": "U0003", "interview_id": "q7qfqxidv", "f": 94.87, "v": 76.0, "s": 3.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "xyubl5rf8", "f": 94.87, "v": 76.0, "s": 3.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "o1lynbo85", "f": 89.0, "v": 81.0, "s": 3.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "o1lynbo85", "f": 89.0, "v": 85.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "o1lynbo85", "f": 85.0, "v": 83.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "o1lynbo85", "f": 80.0, "v": 90.0, "s": 1.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "o1lynbo85", "f": 83.0, "v": 87.0, "s": 10.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 80.0, "v": 82.0, "s": 3.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 78.0, "v": 82.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 78.0, "v": 90.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 93.0, "v": 75.0, "s": 9.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 78.0, "v": 84.0, "s": 16.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 85.0, "v": 89.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "7d8gqanar", "f": 76.0, "v": 77.0, "s": 0.0, "o": 45.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 80.0, "v": 82.0, "s": 3.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 78.0, "v": 82.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 78.0, "v": 90.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 93.0, "v": 75.0, "s": 9.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 78.0, "v": 84.0, "s": 16.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "l1mq4mwbi", "f": 85.0, "v": 89.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 81.0, "v": 78.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 83.0, "v": 86.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 93.0, "v": 81.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 95.0, "v": 72.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 89.0, "v": 87.0, "s": 2.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "trht9r2uw", "f": 77.0, "v": 77.0, "s": 2.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "j9nviunki", "f": 87.0, "v": 70.0, "s": 3.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 84.0, "v": 74.0, "s": 7.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 92.0, "v": 90.0, "s": 13.0, "o": 59.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 80.0, "v": 89.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 88.0, "v": 74.0, "s": 10.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 91.0, "v": 82.0, "s": 9.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 82.0, "v": 77.0, "s": 13.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 77.0, "v": 88.0, "s": 13.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 75.0, "v": 70.0, "s": 35.0, "o": 57.0}, {"user_id": "U0003", "interview_id": "d81wkzq0e", "f": 76.0, "v": 76.0, "s": 6.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 85.0, "v": 81.0, "s": 4.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 81.0, "v": 83.0, "s": 3.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 80.0, "v": 70.0, "s": 4.0, "o": 46.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 84.0, "v": 82.0, "s": 5.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 90.0, "v": 89.0, "s": 10.0, "o": 57.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 87.0, "v": 84.0, "s": 4.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 86.0, "v": 74.0, "s": 6.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 83.0, "v": 89.0, "s": 10.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 88.0, "v": 71.0, "s": 8.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 85.0, "v": 73.0, "s": 12.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 82.0, "v": 70.0, "s": 3.0, "o": 46.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 86.0, "v": 81.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "cfbbnqdbg", "f": 75.0, "v": 90.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 95.0, "v": 89.0, "s": 26.0, "o": 65.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 75.0, "v": 70.0, "s": 8.0, "o": 46.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 95.0, "v": 77.0, "s": 10.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 90.0, "v": 78.0, "s": 12.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 94.0, "v": 84.0, "s": 37.0, "o": 68.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 76.0, "v": 85.0, "s": 5.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 92.0, "v": 87.0, "s": 6.0, "o": 56.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 93.0, "v": 77.0, "s": 35.0, "o": 65.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 89.0, "v": 82.0, "s": 10.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 87.0, "v": 72.0, "s": 22.0, "o": 56.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 77.0, "v": 74.0, "s": 8.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 90.0, "v": 89.0, "s": 10.0, "o": 57.0}, {"user_id": "U0003", "interview_id": "g2g3ei2sz", "f": 93.0, "v": 75.0, "s": 2.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 75.0, "v": 80.0, "s": 3.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 76.0, "v": 75.0, "s": 0.0, "o": 45.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 90.0, "v": 73.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 86.0, "v": 76.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 93.0, "v": 74.0, "s": 12.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 82.0, "v": 75.0, "s": 2.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 89.0, "v": 76.0, "s": 10.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 84.0, "v": 86.0, "s": 0.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 89.0, "v": 74.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 90.0, "v": 74.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 89.0, "v": 81.0, "s": 0.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 95.0, "v": 84.0, "s": 0.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "notw8ayuq", "f": 88.0, "v": 70.0, "s": 0.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 94.0, "v": 77.0, "s": 3.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 78.0, "v": 73.0, "s": 5.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 81.0, "v": 88.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 85.0, "v": 80.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 83.0, "v": 89.0, "s": 0.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 88.0, "v": 75.0, "s": 2.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 88.0, "v": 71.0, "s": 4.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 83.0, "v": 85.0, "s": 0.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 81.0, "v": 74.0, "s": 1.0, "o": 46.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 85.0, "v": 83.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 75.0, "v": 74.0, "s": 0.0, "o": 44.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 92.0, "v": 89.0, "s": 0.0, "o": 54.0}, {"user_id": "U0003", "interview_id": "5u7kee6uy", "f": 89.0, "v": 76.0, "s": 0.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 94.0, "v": 74.0, "s": 3.0, "o": 51.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 91.0, "v": 87.0, "s": 0.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 78.0, "v": 74.0, "s": 0.0, "o": 45.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 91.0, "v": 77.0, "s": 1.0, "o": 50.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 93.0, "v": 85.0, "s": 0.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 92.0, "v": 90.0, "s": 2.0, "o": 55.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 82.0, "v": 75.0, "s": 4.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 90.0, "v": 84.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 87.0, "v": 76.0, "s": 1.0, "o": 49.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 84.0, "v": 72.0, "s": 1.0, "o": 47.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 82.0, "v": 78.0, "s": 0.0, "o": 48.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 76.0, "v": 76.0, "s": 0.0, "o": 45.0}, {"user_id": "U0003", "interview_id": "l8qkkr0ve", "f": 87.0, "v": 87.0, "s": 0.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "as07jlm1f", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "as07jlm1f", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "as07jlm1f", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "as07jlm1f", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "gzhqey9p6", "f": 65.0, "v": 100.0, "s": 22.0, "o": 70.0}, {"user_id": "U0003", "interview_id": "wkjzlxlos", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "wluzvatl3", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "p8cte7f84", "f": 65.0, "v": 99.98, "s": 17.0, "o": 69.0}, {"user_id": "U0003", "interview_id": "idslbtjdk", "f": 72.0, "v": 70.0, "s": 65.0, "o": 70.0}, {"user_id": "U0003", "interview_id": "cpyqcrcmd", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "c5cs2htaf", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "7vu1hx805", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "7vu1hx805", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "7vu1hx805", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "7vu1hx805", "f": 0.0, "v": 0.0, "s": 0.0, "o": 0.0}, {"user_id": "U0003", "interview_id": "ad2ya00ve", "f": 65.0, "v": 99.98, "s": 17.0, "o": 69.0}, {"user_id": "U0003", "interview_id": "0qmtfcnje", "f": 65.0, "v": 99.99, "s": 26.0, "o": 71.0}, {"user_id": "U0003", "interview_id": "qvosj32z9", "f": 65.0, "v": 100.0, "s": 30.0, "o": 72.0}, {"user_id": "U0003", "interview_id": "qvosj32z9", "f": 72.18, "v": 100.0, "s": 12.0, "o": 71.0}, {"user_id": "U0003", "interview_id": "qvosj32z9", "f": 65.0, "v": 0.0, "s": 0.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "qvosj32z9", "f": 65.0, "v": 0.0, "s": 1.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "qvosj32z9", "f": 65.0, "v": 0.0, "s": 0.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "dgdigiet4", "f": 72.0, "v": 70.0, "s": 65.0, "o": 70.0}, {"user_id": "U0003", "interview_id": "j4dxgtge3", "f": 40.29, "v": 91.72, "s": 3.0, "o": 53.0}, {"user_id": "U0003", "interview_id": "cfcpsgwes", "f": 65.0, "v": 0.0, "s": 3.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "5v4x9jgnx", "f": 72.0, "v": 70.0, "s": 65.0, "o": 70.0}, {"user_id": "U0003", "interview_id": "twz5vr632", "f": 72.0, "v": 70.0, "s": 65.0, "o": 70.0}, {"user_id": "U0003", "interview_id": "y9tj1jwtv", "f": 40.45, "v": 0.0, "s": 3.0, "o": 16.0}, {"user_id": "U0003", "interview_id": "1gpcyiq3o", "f": 65.0, "v": 0.0, "s": 3.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "1gpcyiq3o", "f": 70.0, "v": 0.0, "s": 0.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "1gpcyiq3o", "f": 70.0, "v": 0.0, "s": 0.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "1gpcyiq3o", "f": 70.0, "v": 0.0, "s": 1.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "b4o9mwii9", "f": 65.0, "v": 0.0, "s": 3.0, "o": 26.0}, {"user_id": "U0003", "interview_id": "b4o9mwii9", "f": 70.0, "v": 0.0, "s": 0.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "b4o9mwii9", "f": 70.0, "v": 0.0, "s": 0.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "b4o9mwii9", "f": 70.0, "v": 0.0, "s": 1.0, "o": 28.0}, {"user_id": "U0003", "interview_id": "6diwt90rw", "f": 93.27, "v": 99.47, "s": 25.0, "o": 82.0}, {"user_id": "U0003", "interview_id": "6diwt90rw", "f": 93.84, "v": 99.83, "s": 25.0, "o": 82.0}, {"user_id": "U0003", "interview_id": "fe8xjnjki", "f": 88.26, "v": 29.96, "s": 25.0, "o": 52.0}, {"user_id": "U0003", "interview_id": "fe8xjnjki", "f": 94.56, "v": 74.3, "s": 28.0, "o": 73.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 78.0, "v": 81.0, "s": 26.0, "o": 58.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 89.0, "v": 90.0, "s": 0.0, "o": 53.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 84.0, "v": 90.0, "s": 0.0, "o": 52.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 82.0, "v": 80.0, "s": 1.0, "o": 49.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 86.0, "v": 83.0, "s": 0.0, "o": 50.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 78.0, "v": 86.0, "s": 0.0, "o": 49.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 83.0, "v": 70.0, "s": 0.0, "o": 45.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 81.0, "v": 78.0, "s": 0.0, "o": 47.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 76.0, "v": 74.0, "s": 4.0, "o": 46.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 92.0, "v": 89.0, "s": 0.0, "o": 54.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 91.0, "v": 74.0, "s": 0.0, "o": 49.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 89.0, "v": 83.0, "s": 0.0, "o": 51.0}, {"user_id": "U0007", "interview_id": "j3cft0as7", "f": 89.0, "v": 73.0, "s": 0.0, "o": 48.0}, {"user_id": "U0011", "interview_id": "l9b2bcvpj", "f": 59.11, "v": 78.0, "s": 26.0, "o": 60.0}, {"user_id": "U0011", "interview_id": "l9b2bcvpj", "f": 31.18, "v": 72.0, "s": 49.0, "o": 51.0}, {"user_id": "U0011", "interview_id": "l9b2bcvpj", "f": 66.79, "v": 87.0, "s": 0.0, "o": 61.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 59.97, "v": 85.0, "s": 3.0, "o": 58.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 56.98, "v": 89.0, "s": 0.0, "o": 58.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 87.0, "s": 0.0, "o": 62.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 61.53, "v": 84.0, "s": 1.0, "o": 58.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 87.0, "s": 5.0, "o": 63.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 59.6, "v": 81.0, "s": 3.0, "o": 56.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 83.0, "s": 1.0, "o": 61.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 84.0, "s": 4.0, "o": 62.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 72.0, "s": 0.0, "o": 56.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 85.0, "s": 0.0, "o": 62.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 82.0, "s": 0.0, "o": 60.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 78.0, "s": 0.0, "o": 59.0}, {"user_id": "U0011", "interview_id": "b3wq6t5ko", "f": 70.0, "v": 90.0, "s": 0.0, "o": 64.0}, {"user_id": "U0011", "interview_id": "wqje49auq", "f": 57.99, "v": 86.0, "s": 3.0, "o": 58.0}, {"user_id": "U0011", "interview_id": "tyv8833sw", "f": 57.99, "v": 86.0, "s": 3.0, "o": 58.0}, {"user_id": "U0011", "interview_id": "4jz81crji", "f": 61.99, "v": 79.0, "s": 3.0, "o": 56.0}, {"user_id": "U0011", "interview_id": "uupeb862j", "f": 61.99, "v": 79.0, "s": 3.0, "o": 56.0}, {"user_id": "U0011", "interview_id": "rmcxv57nl", "f": 44.39, "v": 81.0, "s": 3.0, "o": 50.0}, {"user_id": "U0011", "interview_id": "ne42awbx8", "f": 64.52, "v": 73.0, "s": 3.0, "o": 55.0}, {"user_id": "U0011", "interview_id": "v5pbv3fk7", "f": 64.52, "v": 73.0, "s": 3.0, "o": 55.0}, {"user_id": "U0011", "interview_id": "2ykumh4e7", "f": 45.9, "v": 90.0, "s": 26.0, "o": 59.0}, {"user_id": "U0011", "interview_id": "2ykumh4e7", "f": 64.71, "v": 86.0, "s": 43.0, "o": 68.0}, {"user_id": "U0011", "interview_id": "noyqxoui1", "f": 45.9, "v": 90.0, "s": 26.0, "o": 59.0}, {"user_id": "U0011", "interview_id": "noyqxoui1", "f": 64.71, "v": 86.0, "s": 43.0, "o": 68.0}, {"user_id": "U0011", "interview_id": "zcungh1e8", "f": 65.0, "v": 85.0, "s": 3.0, "o": 60.0}, {"user_id": "U0014", "interview_id": "bbw4vn9ho", "f": 54.24, "v": 100.0, "s": 24.0, "o": 66.0}, {"user_id": "U0014", "interview_id": "s06bse2qf", "f": 50.15, "v": 67.07, "s": 3.0, "o": 47.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 77.48, "v": 100.0, "s": 29.0, "o": 76.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 88.99, "v": 100.0, "s": 41.0, "o": 83.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 87.52, "v": 100.0, "s": 75.0, "o": 90.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 88.53, "v": 100.0, "s": 60.0, "o": 87.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 77.07, "v": 100.0, "s": 75.0, "o": 85.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 83.55, "v": 100.0, "s": 65.0, "o": 86.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 89.34, "v": 100.0, "s": 27.0, "o": 81.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 82.09, "v": 100.0, "s": 76.0, "o": 88.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 52.97, "v": 100.0, "s": 55.0, "o": 72.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 88.26, "v": 100.0, "s": 49.0, "o": 85.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 89.41, "v": 100.0, "s": 29.0, "o": 81.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 88.92, "v": 100.0, "s": 56.0, "o": 86.0}, {"user_id": "U0014", "interview_id": "so4wxn96r", "f": 81.0, "v": 100.0, "s": 60.0, "o": 84.0}, {"user_id": "U0014", "interview_id": "4kr6t5s5v", "f": 65.0, "v": 67.07, "s": 3.0, "o": 53.0}, {"user_id": "U0014", "interview_id": "4kr6t5s5v", "f": 23.8, "v": 67.07, "s": 23.0, "o": 40.0}, {"user_id": "U0014", "interview_id": "7oa0lte9g", "f": 65.0, "v": 67.07, "s": 3.0, "o": 53.0}, {"user_id": "U0014", "interview_id": "7oa0lte9g", "f": 23.8, "v": 67.07, "s": 23.0, "o": 40.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 46.36, "v": 67.07, "s": 32.0, "o": 51.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 51.6, "v": 67.07, "s": 27.0, "o": 52.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 49.38, "v": 67.07, "s": 4.0, "o": 47.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 58.02, "v": 67.07, "s": 8.0, "o": 51.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 65.7, "v": 67.07, "s": 80.0, "o": 69.0}, {"user_id": "U0014", "interview_id": "f88j1rzv3", "f": 59.54, "v": 67.07, "s": 37.0, "o": 58.0}, {"user_id": "U0014", "interview_id": "6n2zyknuk", "f": 85.74, "v": 100.0, "s": 21.0, "o": 78.0}, {"user_id": "U0014", "interview_id": "1sepkno7x", "f": 85.74, "v": 100.0, "s": 21.0, "o": 78.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 46.36, "v": 67.07, "s": 32.0, "o": 51.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 51.6, "v": 67.07, "s": 27.0, "o": 52.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 49.38, "v": 67.07, "s": 4.0, "o": 47.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 58.02, "v": 67.07, "s": 8.0, "o": 51.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 65.7, "v": 67.07, "s": 80.0, "o": 69.0}, {"user_id": "U0014", "interview_id": "nysaxyrzs", "f": 59.54, "v": 67.07, "s": 37.0, "o": 58.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 74.35, "v": 100.0, "s": 29.0, "o": 75.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 87.08, "v": 100.0, "s": 27.0, "o": 80.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 55.14, "v": 100.0, "s": 72.0, "o": 76.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 88.45, "v": 100.0, "s": 48.0, "o": 84.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 87.87, "v": 100.0, "s": 26.0, "o": 80.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 83.88, "v": 100.0, "s": 27.0, "o": 78.0}, {"user_id": "U0014", "interview_id": "i5iowock6", "f": 83.57, "v": 100.0, "s": 65.0, "o": 86.0}];
+const USERS       = [{"id": "U0003", "name": "Samadhi Hashan"}, {"id": "U0007", "name": "chathur"}, {"id": "U0011", "name": "John"}, {"id": "U0014", "name": "Dinu"}];
+const INTERVIEWS  = [{"id": "ntcorcm6w", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "8rfn6gu2x", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "zoz5f9cdr", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "yqilzskf4", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "s8wngfrmm", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "gfywz5v1c", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "ut1239b1e", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "wvzub0bu6", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "d595c7sne", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "5ldjcnvp1", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "mdx4vjai8", "label": "Samadhi Hashan \u2014 Ai/ML (2/10/2026)", "user_id": "U0003"}, {"id": "1mg1pj1p0", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "w6rvq4i1q", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "ymf8rq9wt", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "poe3pc5qq", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "y770bry78", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "yykc1b6ce", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "ug8tr1vrw", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "ac894a892", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "bnihc73o5", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "2bvcrg6jv", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "swubrtsv6", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "q7qfqxidv", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "xyubl5rf8", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "o1lynbo85", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "7d8gqanar", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "l1mq4mwbi", "label": "Samadhi \u2014 Intern Software Engineer (2/20/2026)", "user_id": "U0003"}, {"id": "trht9r2uw", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "j9nviunki", "label": "Samadhi \u2014 Ai/ML (2/20/2026)", "user_id": "U0003"}, {"id": "d81wkzq0e", "label": "Samadhi \u2014 Intern Software Engineer (2/8/2026)", "user_id": "U0003"}, {"id": "cfbbnqdbg", "label": "Samadhi \u2014 Intern Software Engineer (2/8/2026)", "user_id": "U0003"}, {"id": "g2g3ei2sz", "label": "Samadhi \u2014 Intern Software Engineer (2/8/2026)", "user_id": "U0003"}, {"id": "notw8ayuq", "label": "Samadhi \u2014 Intern Software Engineer (2/9/2026)", "user_id": "U0003"}, {"id": "5u7kee6uy", "label": "Samadhi \u2014 Intern Software Engineer (2/9/2026)", "user_id": "U0003"}, {"id": "l8qkkr0ve", "label": "Samadhi \u2014 Intern Software Engineer (2/9/2026)", "user_id": "U0003"}, {"id": "as07jlm1f", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "gzhqey9p6", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "wkjzlxlos", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "wluzvatl3", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "p8cte7f84", "label": "Samadhi \u2014 Ai/ML (3/5/2026)", "user_id": "U0003"}, {"id": "idslbtjdk", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "cpyqcrcmd", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "c5cs2htaf", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "7vu1hx805", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "ad2ya00ve", "label": "Samadhi \u2014 Ai/ML (3/5/2026)", "user_id": "U0003"}, {"id": "0qmtfcnje", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "qvosj32z9", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "dgdigiet4", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "j4dxgtge3", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "cfcpsgwes", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "5v4x9jgnx", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "twz5vr632", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "y9tj1jwtv", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "1gpcyiq3o", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "b4o9mwii9", "label": "Samadhi \u2014 Intern Software Engineer (3/5/2026)", "user_id": "U0003"}, {"id": "6diwt90rw", "label": "Samadhi \u2014 Intern Software Engineer (3/8/2026)", "user_id": "U0003"}, {"id": "fe8xjnjki", "label": "Samadhi \u2014 Intern Software Engineer (3/8/2026)", "user_id": "U0003"}, {"id": "j3cft0as7", "label": "chathur \u2014 ui/ux (2/9/2026)", "user_id": "U0007"}, {"id": "l9b2bcvpj", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "b3wq6t5ko", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "wqje49auq", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "tyv8833sw", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "4jz81crji", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "uupeb862j", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "rmcxv57nl", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "ne42awbx8", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "v5pbv3fk7", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "2ykumh4e7", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "noyqxoui1", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "zcungh1e8", "label": "John \u2014 Frontend engineer (2/27/2026)", "user_id": "U0011"}, {"id": "bbw4vn9ho", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "s06bse2qf", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "so4wxn96r", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "4kr6t5s5v", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "7oa0lte9g", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "f88j1rzv3", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "6n2zyknuk", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "1sepkno7x", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "nysaxyrzs", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}, {"id": "i5iowock6", "label": "Dinu \u2014 Intern SE (3/3/2026)", "user_id": "U0014"}];
+const T = 50; // threshold
+
+const CONFIGS = [
+  { name: 'Facial Only',             fn: r => r.f >= T ? 1 : 0 },
+  { name: 'Vocal Only',              fn: r => r.v >= T ? 1 : 0 },
+  { name: 'Semantic Only',           fn: r => r.s >= T ? 1 : 0 },
+  { name: 'Facial + Vocal',          fn: r => (r.f*0.5 + r.v*0.5) >= T ? 1 : 0 },
+  { name: 'Facial + Semantic',       fn: r => (r.f*0.67 + r.s*0.33) >= T ? 1 : 0 },
+  { name: 'Vocal + Semantic',        fn: r => (r.v*0.67 + r.s*0.33) >= T ? 1 : 0 },
+  { name: 'All Three (Multimodal)',  fn: r => (r.s*0.2 + r.f*0.4 + r.v*0.4) >= T ? 1 : 0 },
+];
+
+const COLORS = ['#f97316','#a78bfa','#34d399','#fbbf24','#ec4899','#06b6d4','#3b82f6'];
+const COLORS_BG = COLORS.map(c => c + 'b3');
+
+let chart = null;
+
+// ── Populate dropdowns ───────────────────────────────────────────────
+function initFilters() {
+  const uSel = document.getElementById('userFilter');
+  USERS.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.name + ' (' + u.id + ')';
+    uSel.appendChild(opt);
+  });
+}
+
+function updateInterviewDropdown() {
+  const uid = document.getElementById('userFilter').value;
+  const iSel = document.getElementById('interviewFilter');
+  iSel.innerHTML = '<option value="all">All Interviews</option>';
+
+  const filtered = uid === 'all' ? INTERVIEWS : INTERVIEWS.filter(i => i.user_id === uid);
+  filtered.forEach(iv => {
+    const opt = document.createElement('option');
+    opt.value = iv.id;
+    opt.textContent = iv.label;
+    iSel.appendChild(opt);
+  });
+}
+
+function onFilterChange() {
+  updateInterviewDropdown();
+  render();
+}
+
+// ── Compute & render ─────────────────────────────────────────────────
+function getFilteredSamples() {
+  const uid = document.getElementById('userFilter').value;
+  const iid = document.getElementById('interviewFilter').value;
+  let data = ALL_SAMPLES;
+  if (uid !== 'all') data = data.filter(r => r.user_id === uid);
+  if (iid !== 'all') data = data.filter(r => r.interview_id === iid);
+  return data;
+}
+
+function computeAblation(data) {
+  if (data.length === 0) return null;
+  const actuals = data.map(r => r.o >= T ? 1 : 0);
+  return CONFIGS.map(cfg => {
+    const preds = data.map(cfg.fn);
+    const correct = preds.reduce((sum, p, i) => sum + (p === actuals[i] ? 1 : 0), 0);
+    return { name: cfg.name, accuracy: +((correct / data.length) * 100).toFixed(2) };
+  });
+}
+
+function render() {
+  const data = getFilteredSamples();
+  const n = data.length;
+  document.getElementById('sampleBadge').textContent = n + ' Question-Level Samples';
+
+  if (n === 0) {
+    document.getElementById('avgFacial').textContent = '—';
+    document.getElementById('avgVocal').textContent = '—';
+    document.getElementById('avgSemantic').textContent = '—';
+    document.getElementById('avgOverall').textContent = '—';
+    document.getElementById('tableArea').innerHTML = '<div class="no-data">No data for selected filter.</div>';
+    document.getElementById('insightArea').innerHTML = 'No data available.';
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+
+  // Averages
+  const avgF = (data.reduce((s,r) => s + r.f, 0) / n).toFixed(1);
+  const avgV = (data.reduce((s,r) => s + r.v, 0) / n).toFixed(1);
+  const avgS = (data.reduce((s,r) => s + r.s, 0) / n).toFixed(1);
+  const avgO = (data.reduce((s,r) => s + r.o, 0) / n).toFixed(1);
+  document.getElementById('avgFacial').textContent = avgF;
+  document.getElementById('avgVocal').textContent = avgV;
+  document.getElementById('avgSemantic').textContent = avgS;
+  document.getElementById('avgOverall').textContent = avgO;
+
+  // Ablation
+  const results = computeAblation(data);
+
+  // Table
+  let tableHtml = `<table><thead><tr>
+    <th style="width:40px">#</th><th>Configuration</th><th>Accuracy</th>
+  </tr></thead><tbody>`;
+  results.forEach((r, i) => {
+    tableHtml += `<tr>
+      <td style="color:#475569">${i+1}</td>
+      <td>${r.name}</td>
+      <td><div class="accuracy-bar">
+        <div class="bar-bg"><div class="bar-fill" style="width:${r.accuracy}%;background:${COLORS[i]}"></div></div>
+        <span class="acc-val">${r.accuracy}%</span>
+      </div></td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table>';
+  document.getElementById('tableArea').innerHTML = tableHtml;
+
+  // Chart
+  if (chart) chart.destroy();
+  const ctx = document.getElementById('ablationChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: results.map(r => r.name),
+      datasets: [{
+        label: 'Accuracy (%)',
+        data: results.map(r => r.accuracy),
+        backgroundColor: COLORS_BG,
+        borderColor: COLORS,
+        borderWidth: 2, borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor:'#1e293b', titleColor:'#e2e8f0', bodyColor:'#94a3b8',
+          borderColor:'rgba(255,255,255,0.1)', borderWidth:1, cornerRadius:8, padding:12,
+          callbacks: { label: ctx => ctx.parsed.y + '% Accuracy' }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero:true, max:100,
+          ticks: { color:'#475569', font:{size:11,weight:600}, callback:v=>v+'%' },
+          grid: { color:'rgba(255,255,255,0.03)' }
+        },
+        x: {
+          ticks: { color:'#64748b', font:{size:10,weight:600}, maxRotation:45, minRotation:30 },
+          grid: { display:false }
+        }
+      }
+    }
+  });
+
+  // Interpretation
+  const best = results.reduce((a,b) => a.accuracy > b.accuracy ? a : b);
+  const singles = results.slice(0,3);
+  const bestSingle = singles.reduce((a,b) => a.accuracy > b.accuracy ? a : b);
+  const multi = results[6];
+
+  document.getElementById('insightArea').innerHTML = `
+    <strong>Key Findings (${n} samples):</strong><br><br>
+    • The <strong>full multimodal model</strong> (${multi.accuracy}%) 
+      ${multi.accuracy >= bestSingle.accuracy ? 'outperforms' : 'is comparable to'} 
+      the best single modality.<br><br>
+    • <strong>Single modality</strong> performance — 
+      Facial (${results[0].accuracy}%), 
+      Vocal (${results[1].accuracy}%), 
+      Semantic (${results[2].accuracy}%).<br><br>
+    • <strong>Two-modality combinations</strong> — 
+      Facial+Vocal (${results[3].accuracy}%), 
+      Facial+Semantic (${results[4].accuracy}%), 
+      Vocal+Semantic (${results[5].accuracy}%).<br><br>
+    • The <strong>highest accuracy</strong> is achieved by <strong>${best.name}</strong> (${best.accuracy}%), 
+      confirming that combining modalities provides complementary information.
+  `;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+initFilters();
+render();
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 interface AuthModalProps {
   initialMode: 'login' | 'signup';
   onClose: () => void;
-  onSuccess: (role: UserRole, email: string, name: string, userId: string) => void;
+  onSuccess: (role: UserRole, email: string, name: string, userId: string, preferredLanguage?: string) => void;
 }
 
 type AuthView = 'login' | 'signup' | 'forgot-password' | 'otp-verify' | 'reset-password';
@@ -36,6 +36,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
       let role: UserRole | undefined;
       let nameToUse: string | undefined;
       let userId: string | undefined;
+      let preferredLanguage: string | undefined;
 
       if (view === 'login') {
         const result = await geminiService.login(email, password);
@@ -47,6 +48,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
         role = result.data.role;
         nameToUse = result.data.username;
         userId = result.data.user_id;
+        preferredLanguage = result.data.preferred_language;
       
       } else if (view === 'signup') {
         // 4. Confirm Password Match
@@ -68,6 +70,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
         role = result.data.role || UserRole.CANDIDATE;
         nameToUse = result.data.username || fullName;
         userId = result.data.user_id;
+        preferredLanguage = result.data.preferred_language;
       } else {
         // Other views handled elsewhere
         return;
@@ -93,7 +96,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
                },
              });
          }
-         onSuccess(role, email, nameToUse, userId);
+         onSuccess(role, email, nameToUse, userId, preferredLanguage);
       } else {
          setErrorMsg("Authentication successful but user data missing.");
       }

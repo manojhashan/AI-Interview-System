@@ -271,7 +271,7 @@ export const geminiService = {
       }
   },
 
-  async updateUser(userId: string, data: { first_name?: string, last_name?: string, email?: string, password?: string }) {
+  async updateUser(userId: string, data: { first_name?: string, last_name?: string, email?: string, password?: string, preferred_language?: string }) {
       try {
           const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
               method: 'PUT',

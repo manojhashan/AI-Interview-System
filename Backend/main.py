@@ -1,10 +1,11 @@
-import os
+﻿import os
 import json
 import time
 import random
 import string
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional, Dict, Any
@@ -38,10 +39,13 @@ try:
         conn.execute(sa_text(
             "ALTER TABLE interview_results ADD COLUMN IF NOT EXISTS user_deleted BOOLEAN DEFAULT FALSE"
         ))
+        conn.execute(sa_text(
+            "ALTER TABLE \"USER\" ADD COLUMN IF NOT EXISTS preferred_language VARCHAR DEFAULT 'en-US'"
+        ))
         conn.commit()
-    print("✅ Migration: user_deleted column ready.")
+    print("âœ… Migration: user_deleted & preferred_language columns ready.")
 except Exception as _e:
-    print(f"⚠️  Migration note: {_e}")
+    print(f"âš ï¸  Migration note: {_e}")
 
 
 # JWT Config
@@ -162,6 +166,7 @@ class UserCreate(BaseModel):
     last_name: str = Field(..., min_length=2, max_length=50)
     email: str
     password: str = Field(..., min_length=6)
+    preferred_language: Optional[str] = "en-US"
 
 class Token(BaseModel):
     access_token: str
@@ -175,6 +180,7 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    preferred_language: Optional[str] = None
 
 class ForgotPasswordRequest(BaseModel):
     email: str
@@ -276,7 +282,8 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
         last_name=user.last_name,
         email=user.email,
         password=hashed_password,
-        role="CANDIDATE"
+        role="CANDIDATE",
+        preferred_language=user.preferred_language or "en-US"
     )
     # 4. Save to Database
     # 8. Complete Registration
@@ -295,7 +302,8 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "role": new_user.role,
         "username": new_user.first_name,
-        "user_id": new_user.user_id
+        "user_id": new_user.user_id,
+        "preferred_language": new_user.preferred_language or "en-US"
     }
 
 @app.post("/auth/token", response_model=Token)
@@ -322,7 +330,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "token_type": "bearer",
         "role": user.role,
         "username": user.first_name,
-        "user_id": user.user_id
+        "user_id": user.user_id,
+        "preferred_language": user.preferred_language or "en-US"
     }
 
 # --- OTP Storage (In-Memory for now) ---
@@ -339,7 +348,7 @@ def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db
         # For now, let's return 404 to help debugging
         raise HTTPException(status_code=404, detail="User not found")
     
-    # 6. Generate and Send Verification OTP — send to user's real email
+    # 6. Generate and Send Verification OTP â€” send to user's real email
     otp = "".join(random.choices(string.digits, k=4))
     otp_storage[request.email] = otp
 
@@ -519,7 +528,7 @@ def get_all_results(db: Session = Depends(get_db)):
 @app.delete("/api/results/{result_id}")
 def delete_result(result_id: str, user_id: str, db: Session = Depends(get_db)):
     # 33. User Can Soft-Delete Own Interview Result
-    # Data is NOT permanently removed — admin can still view it with a "Deleted by User" badge
+    # Data is NOT permanently removed â€” admin can still view it with a "Deleted by User" badge
     result = db.query(InterviewResult).filter(InterviewResult.id == result_id).first()
     if not result:
         raise HTTPException(status_code=404, detail="Result not found")
@@ -545,6 +554,8 @@ def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get
         db_user.email = user_update.email
     if user_update.password:
         db_user.password = get_password_hash(user_update.password)
+    if user_update.preferred_language:
+        db_user.preferred_language = user_update.preferred_language
     
     db.commit()
     db.refresh(db_user)
@@ -553,7 +564,8 @@ def update_user(user_id: str, user_update: UserUpdate, db: Session = Depends(get
         "first_name": db_user.first_name,
         "last_name": db_user.last_name,
         "email": db_user.email,
-        "role": db_user.role
+        "role": db_user.role,
+        "preferred_language": db_user.preferred_language or "en-US"
     }
 
 @app.post("/api/generate-questions", response_model=List[InterviewQuestion])
@@ -577,4 +589,18 @@ async def analyze_answer(request: AnalyzeAnswerRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import subprocess, sys
+
+    # Auto-generate ablation report on startup
+    print("ðŸ“Š Generating ablation study report...")
+    try:
+        subprocess.run(
+            [sys.executable, "generate_ablation_report.py"],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
+            timeout=30
+        )
+    except Exception as e:
+        print(f"âš ï¸  Ablation report generation: {e}")
+
     uvicorn.run(app, host="0.0.0.0", port=5000)
+

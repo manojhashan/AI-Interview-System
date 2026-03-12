@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { geminiService } from '../geminiService';
-import { User as UserIcon, Mail, Lock, Save, ArrowLeft, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { User as UserIcon, Mail, Lock, Save, ArrowLeft, ShieldCheck, Eye, EyeOff, Globe } from 'lucide-react';
 
 interface UserProfileProps {
   user: User;
@@ -13,6 +13,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, onBack }) => 
   const [firstName, setFirstName] = useState(user.name.split(' ')[0]);
   const [lastName, setLastName] = useState(user.name.split(' ').slice(1).join(' '));
   const [email, setEmail] = useState(user.email);
+  const [preferredLanguage, setPreferredLanguage] = useState(user.preferredLanguage || 'en-US');
+
+  const languageOptions = [
+    { value: 'en-US', label: 'English (US) — En-US' },
+    { value: 'en-GB', label: 'English (UK) — En-GB' },
+    { value: 'en-AU', label: 'English (Australia) — En-AU' },
+    { value: 'en-IN', label: 'English (India) — En-IN' },
+    { value: 'en-ZA', label: 'English (South Africa) — En-ZA' },
+    { value: 'en-LK', label: 'English (Sri Lanka) — En-LK' },
+  ];
   
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,7 +52,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, onBack }) => 
         const updateData: any = {
             first_name: firstName,
             last_name: lastName,
-            email: email
+            email: email,
+            preferred_language: preferredLanguage
         };
         if (newPassword) {
             updateData.password = newPassword;
@@ -56,7 +67,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, onBack }) => 
             const updatedUser: User = {
                 ...user,
                 name: `${result.data.first_name} ${result.data.last_name}`.trim(),
-                email: result.data.email
+                email: result.data.email,
+                preferredLanguage: result.data.preferred_language || 'en-US'
             };
             onUpdate(updatedUser);
             // Clear password fields
@@ -120,6 +132,26 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onUpdate, onBack }) => 
                         required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-blue-500/50 transition-all text-sm text-slate-200"
                     />
+                </div>
+            </div>
+
+            <div className="h-px bg-slate-800 my-8" />
+
+            {/* Language Preference Section */}
+            <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Preferred English Variant</label>
+                <p className="text-xs text-slate-500 mb-2">This setting improves speech-to-text accuracy during interviews.</p>
+                <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                    <select 
+                        value={preferredLanguage} 
+                        onChange={(e) => setPreferredLanguage(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-blue-500/50 transition-all text-sm text-slate-200 appearance-none cursor-pointer"
+                    >
+                        {languageOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
 

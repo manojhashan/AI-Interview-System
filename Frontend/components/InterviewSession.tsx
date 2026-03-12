@@ -282,7 +282,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    recognition.lang = user.preferredLanguage || "en-US";
 
     recognition.onresult = (event: any) => {
       let final = "";

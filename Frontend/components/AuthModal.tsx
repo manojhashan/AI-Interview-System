@@ -11,7 +11,7 @@ interface AuthModalProps {
   onSuccess: (role: UserRole, email: string, name: string, userId: string, preferredLanguage?: string) => void;
 }
 
-type AuthView = 'login' | 'signup' | 'forgot-password' | 'otp-verify' | 'reset-password';
+type AuthView = 'login' | 'signup' | 'forgot-password' | 'otp-verify' | 'reset-password' | 'signup-otp-verify';
 
 const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }) => {
   const [view, setView] = useState<AuthView>(initialMode);
@@ -67,6 +67,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
             setLoading(false);
             return;
         }
+        
+        if (result.data && result.data.require_otp) {
+            setView('signup-otp-verify');
+            setLoading(false);
+            return;
+        }
+
         role = result.data.role || UserRole.CANDIDATE;
         nameToUse = result.data.username || fullName;
         userId = result.data.user_id;
@@ -142,6 +149,41 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
         setErrorMsg(result.error || "Invalid code");
     }
   };
+
+  const handleSignupOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg(null);
+    const otpString = otp.join('');
+    
+    const result = await geminiService.verifySignupOtp(email, otpString);
+    
+    if (!result.success) {
+        setErrorMsg(result.error || "Invalid code");
+        setLoading(false);
+        return;
+    }
+    
+    const role = result.data?.role || UserRole.CANDIDATE;
+    const nameToUse = result.data?.username;
+    const userId = result.data?.user_id;
+    const preferredLanguage = result.data?.preferred_language;
+
+    if (role && nameToUse && userId) {
+        toast.success("Registration successful!", {
+            icon: '🚀',
+            style: {
+                borderRadius: '10px',
+                background: '#333',
+                color: '#fff',
+            },
+        });
+        onSuccess(role, email, nameToUse, userId, preferredLanguage);
+    } else {
+        setErrorMsg("Verification successful but user data missing.");
+    }
+    setLoading(false);
+  };
   
   // 3. Reset Password Click
   // This runs when you type your new password and confirm.
@@ -185,14 +227,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               {view === 'login' && 'Welcome Back'}
               {view === 'signup' && 'Create Account'}
               {view === 'forgot-password' && 'Reset Password'}
-              {view === 'otp-verify' && 'Verify OTP'}
+              {(view === 'otp-verify' || view === 'signup-otp-verify') && 'Verify OTP'}
               {view === 'reset-password' && 'New Password'}
             </h2>
             <p className="text-slate-400 text-sm mt-2">
               {view === 'login' && 'Enter your credentials to continue'}
               {view === 'signup' && 'Join Zynergy AI to boost your career'}
               {view === 'forgot-password' && "Enter your email to receive a code"}
-              {view === 'otp-verify' && `Code sent to ${email || 'your email'}`}
+              {(view === 'otp-verify' || view === 'signup-otp-verify') && `Code sent to ${email || 'your email'}`}
               {view === 'reset-password' && 'Create a strong new password'}
             </p>
           </div>
@@ -200,6 +242,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
           <form onSubmit={
             view === 'login' || view === 'signup' ? handleSubmit : 
             view === 'forgot-password' ? handleForgotPassword :
+            view === 'signup-otp-verify' ? handleSignupOtpVerify :
             view === 'otp-verify' ? handleOtpVerify : handleResetPassword
           } className="space-y-5">
             
@@ -290,7 +333,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
               </div>
             )}
 
-            {view === 'otp-verify' && (
+            {(view === 'otp-verify' || view === 'signup-otp-verify') && (
               <div className="flex justify-center gap-4 py-4">
                 {otp.map((digit, idx) => (
                   <input
@@ -330,7 +373,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ initialMode, onClose, onSuccess }
                   {view === 'login' && 'Sign In Now'}
                   {view === 'signup' && 'Create Account'}
                   {view === 'forgot-password' && 'Send Reset Code'}
-                  {view === 'otp-verify' && 'Verify Code'}
+                  {(view === 'otp-verify' || view === 'signup-otp-verify') && 'Verify Code'}
                   {view === 'reset-password' && 'Update Password'}
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>

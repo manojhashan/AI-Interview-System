@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time
 import random
@@ -149,6 +149,7 @@ class AnalyzeAnswerRequest(BaseModel):
     answer: str
     audioBlob: Optional[str] = None
     imageFrames: Optional[List[str]] = None
+    language: Optional[str] = "en-US"
 
 class AnalysisFeedback(BaseModel):
     facial: str
@@ -159,6 +160,7 @@ class AnalysisFeedback(BaseModel):
 class AnalyzeAnswerResponse(BaseModel):
     scores: ConfidenceScore
     feedback: AnalysisFeedback
+    transcribedAnswer: Optional[str] = None
 
 class UserCreate(BaseModel):
     # 13. Character Limit Enforcement
@@ -186,6 +188,10 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 class VerifyOtpRequest(BaseModel):
+    email: str
+    otp: str
+
+class VerifySignupOtpRequest(BaseModel):
     email: str
     otp: str
 
@@ -252,16 +258,51 @@ def get_result_data(orm_result):
 async def root():
     return {"status": "online", "message": "Zynergy AI Backend is running."}
 
-@app.post("/auth/signup", response_model=Token)
+# --- OTP Storage (In-Memory for now) ---
+otp_storage = {}
+registration_otp_storage = {} # Store user data temporarily before verification
+
+@app.post("/auth/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     # 1. Check if email already exists
-    # 5. Check Unique Email
     # If the email is already in the database, stop and tell the user.
     print(f"DEBUG: Signup attempt for {user.email}")
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Generate and Send OTP for registration
+    otp = "".join(random.choices(string.digits, k=4))
+    
+    # Store user data temporarily
+    registration_otp_storage[user.email] = {
+        "user_data": user,
+        "otp": otp
+    }
+
+    email_sent = send_otp_email(user.email, otp)
+    if not email_sent:
+        print(f"DEBUG (email failed): Registration OTP for {user.email} is {otp}")
+
+    return {"message": "OTP sent to your email address", "require_otp": True}
+
+@app.post("/auth/verify-signup-otp", response_model=Token)
+def verify_signup_otp(request: VerifySignupOtpRequest, db: Session = Depends(get_db)):
+    if request.email not in registration_otp_storage:
+        raise HTTPException(status_code=400, detail="No registration in progress for this email")
+    
+    stored_data = registration_otp_storage[request.email]
+    if stored_data["otp"] != request.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+        
+    user_data = stored_data["user_data"]
+    
+    # Ensure email is still not taken
+    db_user = db.query(User).filter(User.email == user_data.email).first()
+    if db_user:
+         del registration_otp_storage[request.email]
+         raise HTTPException(status_code=400, detail="Email already registered")
+
     last_user = db.query(User).order_by(User.user_id.desc()).first()
     if last_user and last_user.user_id.startswith("U"):
         try:
@@ -272,22 +313,17 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     else:
         new_id = "U0001"
     
-    # 3. Secure the password
-    # We never save the real password. We turn it into a secret code (hash) so it's safe.
-    
-    hashed_password = get_password_hash(user.password)
+    hashed_password = get_password_hash(user_data.password)
     new_user = User(
         user_id=new_id,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        email=user.email,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        email=user_data.email,
         password=hashed_password,
         role="CANDIDATE",
-        preferred_language=user.preferred_language or "en-US"
+        preferred_language=user_data.preferred_language or "en-US"
     )
-    # 4. Save to Database
-    # 8. Complete Registration
-    # We add the new user information to our database and save it.
+    
     db.add(new_user)
     try:
         db.commit()
@@ -295,6 +331,9 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        
+    # Clean up OTP storage
+    del registration_otp_storage[request.email]
     
     access_token = create_access_token(data={"sub": new_user.email})
     return {
@@ -305,6 +344,7 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
         "user_id": new_user.user_id,
         "preferred_language": new_user.preferred_language or "en-US"
     }
+
 
 @app.post("/auth/token", response_model=Token)
 # 9. User Login Management
@@ -334,8 +374,6 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "preferred_language": user.preferred_language or "en-US"
     }
 
-# --- OTP Storage (In-Memory for now) ---
-otp_storage = {}
 
 @app.post("/auth/forgot-password")
 # 6. Generate and Send Verification OTP
@@ -580,7 +618,8 @@ async def analyze_answer(request: AnalyzeAnswerRequest):
         question=request.question,
         answer=request.answer,
         audio_blob=request.audioBlob,
-        frames=request.imageFrames
+        frames=request.imageFrames,
+        language=request.language
     )
     return result
 

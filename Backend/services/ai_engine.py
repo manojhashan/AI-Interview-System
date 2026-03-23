@@ -45,7 +45,7 @@ def generate_questions_gemini(cv_text: str, job_role: str, count: int = 6):
         """
 
         # Try models in order: lite (1500/day free) → 1.5-flash → flash-latest
-        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-flash-latest']
+        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-flash-latest']
         response = None
         last_error = None
         for model_name in models_to_try:
@@ -112,11 +112,24 @@ def generate_feedback_gemini(question: str, answer: str, job_role: str = "Candid
             f"Provide a single sentence identifying ONE Strength and ONE Area for Improvement."
         )
         
-        # Only use the free/lite model for per-question feedback to save tokens
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-lite',
-            contents=prompt
-        )
+        # Try models in order to prevent quota errors
+        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-flash-latest']
+        response = None
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                break
+            except Exception as me:
+                print(f"DEBUG: Feedback model {model_name} failed: {me}")
+                last_error = me
+                continue
+                
+        if response is None:
+            raise last_error
 
         return response.text.strip()
     except Exception as e:
@@ -146,7 +159,7 @@ def generate_overall_summary_gemini(interview_details: list, job_role: str) -> s
             f"In 2-3 sentences, provide clear and actionable overall advice to help this candidate improve."
         )
         
-        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-flash-latest']
+        models_to_try = ['gemini-2.0-flash-lite', 'gemini-1.5-flash-latest', 'gemini-flash-latest']
         response = None
         last_error = None
         for model_name in models_to_try:
@@ -233,12 +246,25 @@ def get_dummy_analysis(modality: str):
     }
     return responses.get(modality, {"score": 75.0, "explanation": "Good overall performance."})
 
-def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None, frames: list = None):
+from services.speech_to_text import transcribe_base64_audio
+
+def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None, frames: list = None, language: str = "en-US"):
     """
     Main entry point for analyzing an answer.
-    Integrates semantic, facial, and vocal analysis — all run in PARALLEL
-    using ThreadPoolExecutor so the interview answer feedback is fast.
     """
+    
+    # Check if frontend transcription failed, and try backend fallback
+    transcribed_final = None
+    if answer == "Text transcript unavailable (Speech-to-text failed or no speech detected)." and audio_blob:
+        print(f"[AIEngine] Frontend transcription failed, attempting backend transcription (Lang: {language})...")
+        transcribed_text = transcribe_base64_audio(audio_blob, language)
+        if transcribed_text.strip():
+            print(f"[AIEngine] Backend transcription successful: {transcribed_text}")
+            answer = transcribed_text
+            transcribed_final = transcribed_text
+        else:
+            print("[AIEngine] Backend transcription also failed or audio was silent.")
+            answer = "No audible speech could be transcribed."
     from concurrent.futures import ThreadPoolExecutor
 
     # 1. Define each analysis as a callable
@@ -313,7 +339,8 @@ def analyze_answer_multimodal(question: str, answer: str, audio_blob: str = None
             "semantic": semantic_feedback,
             "summary":  "AI Analysis Complete."
         },
-        "xai": xai_explanation
+        "xai": xai_explanation,
+        "transcribedAnswer": transcribed_final
     }
 
 # Alias for backward compatibility

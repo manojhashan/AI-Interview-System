@@ -187,7 +187,7 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack, isAdmin = fal
          <div className="grid gap-8">
             {result.details.map((detail, index) => (
                <div key={index} className="bg-slate-900/50 border border-slate-800 rounded-[2rem] overflow-hidden hover:border-slate-700 transition-all group">
-                  <div className="p-8 border-b border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                  <div className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                      <div className="flex gap-4 items-start max-w-2xl">
                         <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center font-bold text-slate-400 shrink-0">
                            {index + 1}
@@ -204,36 +204,6 @@ const ResultView: React.FC<ResultViewProps> = ({ resultId, onBack, isAdmin = fal
                      <div className="bg-slate-950 px-6 py-3 rounded-2xl border border-slate-800 flex items-center gap-3">
                         <Star size={16} className="text-amber-400 fill-amber-400" />
                         <span className="font-bold text-white text-xl">{detail.scores.overall}%</span>
-                     </div>
-                  </div>
-
-                  <div className="p-8 grid lg:grid-cols-2 gap-10">
-                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-widest">
-                           <User size={14} /> Your Response
-                        </div>
-                        <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 italic text-slate-400 text-sm leading-relaxed">
-                           "{detail.answer}"
-                        </div>
-                     </div>
-                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-blue-500 text-xs font-bold uppercase tracking-widest">
-                           <MessageSquare size={14} /> AI Expert Feedback
-                        </div>
-                        <div className="space-y-3">
-                           <p className="text-slate-300 text-sm font-medium">{detail.feedback.summary}</p>
-                           <div className="flex gap-3 bg-blue-500/5 p-4 rounded-xl border border-blue-500/10">
-                              <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
-                              <p className="text-xs text-slate-400 leading-relaxed">
-                                 <span className="text-blue-300 font-bold">Analysis: </span>
-                                 {detail.feedback.semantic.split('|').map((part, i) => (
-                                     <span key={i} className="block mt-1">
-                                        {part.trim()}
-                                     </span>
-                                 ))}
-                              </p>
-                           </div>
-                        </div>
                      </div>
                   </div>
                </div>

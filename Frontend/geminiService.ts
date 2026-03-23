@@ -30,8 +30,9 @@ export const geminiService = {
     question: string,
     answer: string,
     audioBlob?: string, // base64
-    imageFrames?: string[] // base64 snapshots
-  ): Promise<{ scores: ConfidenceScore; feedback: any }> {
+    imageFrames?: string[], // base64 snapshots
+    language?: string
+  ): Promise<{ scores: ConfidenceScore; feedback: any; transcribedAnswer?: string }> {
     try {
       const response = await fetch(`${API_BASE_URL}/analyze-answer`, {
         method: "POST",
@@ -43,6 +44,7 @@ export const geminiService = {
           answer,
           audioBlob,
           imageFrames,
+          language: language || "en-US",
         }),
       });
 
@@ -117,6 +119,29 @@ export const geminiService = {
       return { success: true, data };
     } catch (error) {
       console.error("Signup error:", error);
+      return { success: false, error: "Network error or server unreachable" };
+    }
+  },
+
+  async verifySignupOtp(email: string, otp: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await fetch(`http://localhost:5000/auth/verify-signup-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.detail || "Verification failed" };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Verify Signup OTP error:", error);
       return { success: false, error: "Network error or server unreachable" };
     }
   },

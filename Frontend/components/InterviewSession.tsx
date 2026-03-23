@@ -356,6 +356,7 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
   };
 
   const handleStopRecording = async () => {
+    if (!isRecordingRef.current) return; // Prevent double trigger
     setIsRecording(false);
     isRecordingRef.current = false;
     clearInterval((window as any)._frameCaptureInterval);
@@ -397,22 +398,25 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
       const fullTranscript = (transcript + interimTranscript).trim();
       const noSpeechDetected = fullTranscript.length === 0;
       const answerText = noSpeechDetected
-        ? "No audio detected. (Please ensure you speak clearly or check microphone permissions)"
+        ? "Text transcript unavailable (Speech-to-text failed or no speech detected)."
         : fullTranscript;
 
-      // If no speech transcript, don't send audio blob — vocal score should be 0
-      const audioToSend = noSpeechDetected ? undefined : audioBlobBase64;
+      // Always send audio, even if speech-to-text failed, so vocal confidence can still be analyzed
+      const audioToSend = audioBlobBase64;
 
       const analysis = await geminiService.analyzeAnswer(
         question,
         answerText,
         audioToSend,
         frames,
+        user.preferredLanguage || "en-US"
       );
+
+      const finalAnswerText = analysis.transcribedAnswer ? analysis.transcribedAnswer : answerText;
 
       const newDetail: QuestionDetail = {
         question: question,
-        answer: answerText,
+        answer: finalAnswerText,
         scores: analysis.scores,
         feedback: analysis.feedback,
       };
@@ -448,8 +452,12 @@ const InterviewSession: React.FC<InterviewSessionProps> = ({
     }
   };
 
+  const isSavingRef = useRef(false);
+
   const saveFullSession = (isIncomplete: boolean = false) => {
     if (sessionDetails.length === 0) return;
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
 
     // Helper to calculate average safely
     // vocal: always average ALL scores including 0 (0 = no speech detected, must be reflected)

@@ -86,6 +86,13 @@ def analyze_audio(b64_audio: str) -> dict:
         # Load audio (assuming native sample rate or 22050 librosa default)
         y, sr = librosa.load(temp_path, sr=22050)
         
+        # Check if audio is completely silent or just background noise
+        if len(y) == 0 or np.max(np.abs(y)) < 0.02:
+            return {
+                "vocal_score": 0.0,
+                "vocal_feedback": "Audio is too quiet or silent. Please check your microphone."
+            }
+        
         # Extract mel-spectrogram with 64 mels
         mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=64)
         mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
